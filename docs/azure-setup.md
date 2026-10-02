@@ -1,10 +1,11 @@
 # Azure and identity setup
 
-The first milestone keeps Web, API, and SQL Server LocalDB on the development computer, with Entra External ID handling actual customer sign-in. Azure hosting can follow once this workflow is verified. No Azure hosting resources have been provisioned by this project.
+The first milestone ran Web, API, and SQL Server LocalDB on the development computer, with Entra External ID handling customer sign-in. A free Azure beta was deployed on October 2, 2026; see [hosted environment and deployment guide](free-hosting.md). Local development remains available.
 
 ## Selected environment
 
-- Azure subscription: `656761a1-f733-44d2-85d9-44cb54a2f96d` (provided by the owner; access and free-offer eligibility are not yet verified).
+- Azure subscription: `656761a1-f733-44d2-85d9-44cb54a2f96d`, `ListHero_Subscription` (access and free deployment verified).
+- Hosting subscription directory: `9c7e1e73-a0b2-48e9-a616-4747fd800348`; separate from the external customer tenant.
 - Hosting region: Central US (`centralus`).
 - External tenant name: List Hero.
 - External tenant ID: `59a74a72-2c96-4981-9475-6b968a271e4a`.
@@ -13,7 +14,7 @@ The first milestone keeps Web, API, and SQL Server LocalDB on the development co
 - Existing Azure AD B2C tenant is separate from the new External ID tenant.
 - No subscription directory transfer or changes to the existing B2C tenant have been requested.
 
-Both local hosts now have the External ID instance, tenant ID, client IDs, and API scope configured. Local user secrets enable authentication and hold the web credential. The checked-in default still disables authentication for an unconfigured Development machine. Live customer sign-in and list/item creation have succeeded. Subscription linkage has not yet been verified.
+Both local and hosted apps have the External ID instance, tenant ID, client IDs, and API scope configured. Local user secrets enable authentication and hold the web credential. The checked-in default disables authentication only for an unconfigured Development machine. Live customer sign-in and list/item creation have succeeded locally and in the hosted beta. The external tenant's subscription-linked `ciamDirectories` resource was verified.
 
 ## Completed identity configuration
 
@@ -29,13 +30,13 @@ Regular-browser Azure CLI administrative sign-in succeeded. The following config
 | Initial customer method | Email and password; optional display name |
 | Development credential expiry | April 2, 2027, 00:31:55 UTC |
 
-The Web registration is a confidential, single-external-tenant application with HTTPS localhost sign-in/sign-out callbacks. The API issues v2 access tokens and defines `access_as_user` and an unassigned `Admin` role. The only Web delegated API permission and tenant consent are for List Hero API; no Microsoft Graph permissions were granted to List Hero. Ordinary customers need no role assignment. Administrative access to the tenant remains separate from the application's Admin role.
+The Web registration is a confidential, single-external-tenant application with HTTPS localhost and hosted-beta sign-in/sign-out callbacks. The API issues v2 access tokens and defines `access_as_user` and an unassigned `Admin` role. The only Web delegated API permission and tenant consent are for List Hero API; no Microsoft Graph permissions were granted to List Hero. Ordinary customers need no role assignment. Administrative access to the tenant remains separate from the application's Admin role.
 
 `scripts/Initialize-Entra.ps1` uses the project-local administrative CLI session to configure these registrations and the customer flow, retain matching registrations and local credentials, and update local settings. It stops for ambiguous registrations or unexpected permissions. It creates no Azure hosting/database resources and makes no changes to the existing B2C tenant. Its password response is captured directly and sent to .NET user secrets; secret values are not printed or written to request files. User secrets are a local development store, not a production vault.
 
-The project owner successfully completed customer sign-in and created a test list and item. API logs confirm Entra signature, lifetime, and API audience validation; a read-only LocalDB check confirmed one active user, one active list, and one active item. Remaining live checks are reopening the saved list, authenticated sign-out/antiforgery behavior, token renewal, and a second customer being unable to retrieve the first customer's owner route. Integration tests already verify owner isolation with test identities. Customer sign-in is distinct from the administrative Azure CLI sign-in.
+The project owner successfully completed customer sign-in and created a test list and item. API logs confirm Entra signature, lifetime, and API audience validation; a read-only LocalDB check confirmed one active user, one active list, and one active item. On October 2, 2026 the owner reported completing the live sign-out, token renewal, and second-customer isolation checks. Integration tests also verify owner isolation with test identities. Customer sign-in is distinct from the administrative Azure CLI sign-in.
 
-Verification after configuration: Release build passed with zero warnings/errors; 36 automated tests passed and the optional SQL test was skipped in this run (it passed against LocalDB during the preceding milestone work). Both HTTPS hosts started with authentication enabled. The home page returned 200 and displayed sign-in; `/account/sign-in` returned a 302 challenge to the correct External ID host/client with the configured API scope. API status returned 200; protected routes rejected missing and malformed tokens with 401. GET sign-out returned the Blazor 404 fallback; anonymous POST sign-out required authentication. Authenticated sign-out and antiforgery rejection still need the real customer session check.
+Initial verification after configuration: Release build passed with zero warnings/errors; 36 automated tests passed and the optional SQL test was skipped in that run (it passed against LocalDB during the preceding milestone work). Both HTTPS hosts started with authentication enabled. The home page returned 200 and displayed sign-in; `/account/sign-in` returned a 302 challenge to the correct External ID host/client with the configured API scope. API status returned 200; protected routes rejected missing and malformed tokens with 401. GET sign-out returned the Blazor 404 fallback; anonymous POST sign-out required authentication. The latest suite contains 154 passing cases, including all SQL/browser checks; see [current test evidence](test-coverage.md).
 
 The tenant's public OpenID discovery endpoint was verified successfully on October 1, 2026. Its issuer is `https://59a74a72-2c96-4981-9475-6b968a271e4a.ciamlogin.com/59a74a72-2c96-4981-9475-6b968a271e4a/v2.0`. This confirms discovery is available; it does not verify administrator access or a working application sign-in.
 
@@ -86,8 +87,8 @@ The offers below were checked against Microsoft's documentation on October 1, 20
 | Component | Initial choice | Free-offer considerations |
 | --- | --- | --- |
 | Customer identity | Entra External ID core features | First 50,000 monthly active users are free. Premium add-ons and SMS are outside this assumption. |
-| Web/API compute | Run both locally | No Azure hosting charge. Optional App Service Free (F1) is for a small development/demo environment and has restrictive quotas. |
-| Database | Existing SQL Server LocalDB | No Azure database charge. Optional Azure SQL free offer provides 100,000 vCore seconds, 32 GB data, and 32 GB backup per database per month. |
+| Web/API compute | Local development plus hosted App Service Free (F1) beta | Free plan verified after deployment; restrictive CPU/connection quotas apply. |
+| Database | LocalDB for development; separate Azure SQL free-offer beta database | Hosted free allowance and quota pausing verified; 100,000 vCore seconds, 32 GB data, and 32 GB backup monthly. |
 | Images | External image URLs | No List Hero blob storage is provisioned. |
 | Custom domain | Defer | Azure's default app hostname can be used for a later hosted demo. |
 
@@ -111,7 +112,7 @@ Do not add a fake login to work around tenant setup. The test assembly uses a te
 
 ## Later Azure hosting
 
-Once the tenant and region are established, prepare a deployment definition for the agreed resources and inspect it before deployment. Confirm free SKUs and SQL quota-stop settings in the actual subscription. Configure persistent protected Data Protection keys and appropriate token caching before deploying. Add hosted redirect URIs, secure the database connection, and apply reviewed migrations as a separate deployment step. No paid tier should be selected as an automatic fallback when a free offer is unavailable.
+The [free beta guide](free-hosting.md) describes the deployed F1/SQL free-offer environment, self-contained packages, encrypted persistent keys and SQL token cache, separate migration helper, and hosted callback update. Provisioning and live checks succeeded; the owner confirmed hosted sign-in and list/item creation. No paid tier is selected as an automatic fallback when a free offer is unavailable.
 
 ## Microsoft references
 

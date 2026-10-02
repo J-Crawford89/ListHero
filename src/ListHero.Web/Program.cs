@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
+using Microsoft.Identity.Web.TokenCacheProviders.Distributed;
+using ListHero.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 var authenticationEnabled = builder.Configuration.GetValue<bool>("Authentication:Enabled");
@@ -21,7 +23,22 @@ if (authenticationEnabled)
     var scopes = builder.Configuration.GetSection("ListHeroApi:Scopes").Get<string[]>();
     if (scopes is not { Length: > 0 } || scopes.Any(string.IsNullOrWhiteSpace))
         throw new InvalidOperationException("Configure ListHeroApi:Scopes before enabling authentication.");
-    builder.Services.AddDistributedMemoryCache();
+    if (builder.Configuration.GetConnectionString("TokenCache") is { Length: > 0 } tokenCacheConnection)
+    {
+        builder.Services.AddDistributedSqlServerCache(options =>
+        {
+            options.ConnectionString = tokenCacheConnection;
+            options.SchemaName = "cache";
+            options.TableName = "TokenCache";
+        });
+        builder.Services.Configure<MsalDistributedTokenCacheAdapterOptions>(options => options.Encrypt = true);
+    }
+    else
+    {
+        if (builder.Configuration.GetValue<bool>("DataProtection:RequirePersistentKeys"))
+            throw new InvalidOperationException("Hosted authentication requires the persistent token cache connection.");
+        builder.Services.AddDistributedMemoryCache();
+    }
     builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
         .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("EntraExternalId"))
         .EnableTokenAcquisitionToCallDownstreamApi(scopes)
@@ -48,6 +65,7 @@ else
     builder.Services.AddScoped<IApiAccessTokenProvider, UnconfiguredApiAccessTokenProvider>();
 }
 builder.Services.AddAuthorization();
+builder.Services.AddHostedDataProtection(builder.Configuration, "ListHero.Web");
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddListHeroClient();

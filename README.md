@@ -21,7 +21,7 @@ Implemented:
 - Conditional item-edit warnings and viewer refresh every 20 seconds.
 - Tests for authorization, privacy, purchase ownership, overpurchasing, token handling, persistence metadata, and API startup/security.
 
-The core workflows are implemented. Real customer sign-in and list/item creation have been verified against the List Hero external tenant and LocalDB. Automated tests cover the remaining owner and collaboration operations, including real SQL Server concurrency; an isolated browser check verified anonymous marking through a share link, persistence of guest ownership after reload, and undo. Live second-customer Entra isolation, sign-out, and token renewal checks remain pending. No database migration runs automatically at startup. See [core workflow guide](docs/core-workflows.md) for usage, verification, and current limits.
+The core workflows are implemented. Real customer sign-in and list/item creation have been verified against the List Hero external tenant and LocalDB. Automated tests cover the remaining owner and collaboration operations, including real SQL Server concurrency; an isolated browser check verified anonymous marking through a share link, persistence of guest ownership after reload, and undo. The owner reports completing live second-customer Entra isolation, sign-out, and token renewal checks on October 2, 2026. No database migration runs automatically at startup. See [core workflow guide](docs/core-workflows.md) for usage, verification, and current limits.
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ dotnet test ListHero.slnx --no-build --no-restore
 
 Package versions are centralized in `Directory.Packages.props`. NuGet sources are specified in `NuGet.Config`. Compiler warnings are treated as errors.
 
-The suite contains 150 cases. The default run executes 144 and explicitly skips five SQL Server tests and one browser regression. To include the SQL tests, use a fresh database name; scenarios apply migrations to separate database suffixes and retain them for inspection:
+The suite contains 154 cases. The default run executes 148 and explicitly skips five SQL Server tests and one browser regression. To include the SQL tests, use a fresh database name; scenarios apply migrations to separate database suffixes and retain them for inspection:
 
 ```powershell
 $testDatabase = 'ListHero_Integration_' + [guid]::NewGuid().ToString('N')
@@ -141,7 +141,7 @@ Configure the API's Instance, TenantId, ClientId, and Enabled values the same wa
 
 Once configured, sign in from the home page to reach `/lists`. Create a list, add items, return to My lists, and reopen it. The web host acquires an API token for the circuit's explicit authenticated principal and sends it on each protected request. MSAL handles cached tokens/refresh; interactive reauthentication is offered when required. Internal users are provisioned by the API from the validated issuer and object ID, never email or an unverified request ID. Owners receive only the purchase-free owner response type.
 
-The current distributed-cache implementation is process memory, suitable for local development. Configure persistent shared token caching before scaling the web host; a restart currently requires signing in again when the cached token is lost.
+Local development uses an in-memory token cache. Hosted deployment uses an encrypted SQL token cache and persistent certificate-encrypted Data Protection keys. Hosted configuration refuses to start with missing key protection or token-cache configuration.
 
 Microsoft references:
 
@@ -151,7 +151,7 @@ Microsoft references:
 
 ## Deployment and future hosts
 
-Azure App Service and Azure SQL are the initial hosting direction; deployment resources are not provisioned by this scaffold. Persist and protect ASP.NET Core Data Protection keys for both hosts before deploying or scaling. API keys protect recoverable share tokens; web keys protect login cookies and persisted guest credentials. Losing the key ring can make those existing values unreadable. Multiple instances of the same host must share its key ring and application name.
+The [free Azure beta](https://listhero-yj3pk6oimchdi.azurewebsites.net/) is deployed in Central US, with verified F1 hosting and Azure SQL free allowance/quota pausing. The owner confirmed hosted sign-in and test list/item creation. See the [environment and deployment guide](docs/free-hosting.md) for scripts, limits, and remaining beta checks. No paid fallback is selected. API keys protect recoverable share tokens; web keys protect login cookies and persisted guest credentials. Losing the hosted key ring can make those existing values unreadable. Multiple instances of the same host must share its key ring and application name.
 
 The MAUI host is deliberately deferred. It will reference UI, Client, Client.Api, and Contracts, provide device storage/authentication adapters, and continue to use the same API. Domain, Application, and Infrastructure belong to the backend.
 

@@ -1,6 +1,6 @@
 # Test coverage
 
-Updated 2026-10-02 after the coverage milestone. The suite contains 150 cases: 144 ordinary tests, five opt-in SQL tests, and one opt-in browser regression that also uses SQL. The full run includes every case; the default run skips six environment-dependent cases.
+Updated 2026-10-02 after free-hosting deployment. The suite contains 154 cases: 148 ordinary tests, five opt-in SQL tests, and one opt-in browser regression that also uses SQL. The full run includes every case; the default run skips six environment-dependent cases.
 
 ## Measured result
 
@@ -10,17 +10,17 @@ The full Release suite passes with no skipped tests. The Release build has zero 
 | --- | ---: | ---: |
 | ListHero.Domain | 100.0% | 90.4% |
 | ListHero.Application | 98.7% | 91.8% |
-| ListHero.Infrastructure | 96.6% | 68.2% |
-| ListHero.Api | 99.5% | 82.3% |
+| ListHero.Infrastructure | 96.7% | 73.1% |
+| ListHero.Api | 95.7% | 76.7% |
 | ListHero.Contracts | 95.7% | 100.0% |
 | ListHero.Client | 97.4% | 100.0% |
 | ListHero.Client.Api | 100.0% | 98.1% |
-| ListHero.UI | 95.4% | 86.1% |
-| ListHero.Web | 89.9% | 74.0% |
+| ListHero.UI | 95.8% | 86.6% |
+| ListHero.Web | 88.8% | 71.6% |
 
-Aggregate: 1,228/1,265 executable lines (97.1%) and 641/734 branches (87.3%). Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
+Aggregate: 1,278/1,327 executable lines (96.3%) and 672/782 branches (85.9%). All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
 
-Final local evidence: `.artifacts/coverage-milestone/coverage.trx` and `.artifacts/coverage-milestone/0ceb5ff5-c233-4583-9e00-d1c4e3446b06/coverage.cobertura.xml`. Both are Git-ignored.
+Latest local evidence: `.artifacts/feature-removal-coverage/coverage.trx` and `.artifacts/feature-removal-coverage/888b0a81-1609-4a06-bead-cd2047128ac5/coverage.cobertura.xml`. Both are Git-ignored.
 
 The original audit had 50 passing cases, low client HTTP coverage, no Web host measurement, and no continuous SQL/coverage enforcement. Its unfiltered totals included generated code, so its aggregate percentage should not be compared directly with this consistently filtered baseline.
 
@@ -35,6 +35,7 @@ The original audit had 50 passing cases, low client HTTP coverage, no Web host m
 - **Real SQL:** tests cover migration, provisioning, persistence, ordering, row versions, stable share-token recovery, persisted revocation/expiration, retained history, competing edits, duplicate retries, and simultaneous different actors/payloads with one idempotency key. A test-only barrier forces both undo requests to read the same version before writing, exercising concurrency recovery. Direct SQL writes prove quantity, price, actor, and foreign-key constraints reject invalid data.
 - **Repeatable browser regression:** headless Chromium runs the actual Blazor host over a temporary HTTPS endpoint with separate owner/guest browser contexts and an isolated SQL database. It creates a list/item/link, marks an excess quantity, reloads guest ownership, verifies owner privacy and redirection, undoes the mark, edits the list, revokes the link, and removes the item/list. It also checks browser script errors. The owner cookie and bearer identity are test fixtures; no real Entra credentials are needed.
 - **Coverage enforcement:** `coverage-thresholds.json` defines minimum line/branch coverage per assembly. `scripts/Test-Coverage.ps1` rejects missing assemblies, coverage regressions, unsuccessful runs, and skipped cases in the full job. Eight tests verify that gate using synthetic reports.
+- **Hosted security:** four additional cases verify certificate-encrypted keys with password-encrypted PEM loading, cookie/share credential recovery after both host restarts, application separation, encrypted SQL token-cache configuration, transient SQL retry configuration, and startup refusal for incomplete hosted security settings. Windows x86 publication, Azure template validation, free-resource provisioning, database bootstrap, and live HTTP/database-read/authorization checks succeeded. The owner confirmed hosted customer sign-in and list/item creation. Hosted collaboration/sign-out/renewal checks remain separate beta acceptance work.
 
 ## Run the full suite
 
@@ -71,8 +72,8 @@ The connection may point to another SQL Server. Test database names must start w
 
 ## CI and remaining verification
 
-`.github/workflows/ci.yml` retains the Linux build/default-test job and adds a Windows job that starts LocalDB, installs headless Chromium, runs every test, enforces coverage, publishes a coverage table to the job summary, and uploads TRX/Cobertura reports. The workflow and gate have been validated locally; the first hosted Actions run remains to be observed after the repository is pushed.
+`.github/workflows/ci.yml` retains the Linux build/default-test job and adds a Windows job that starts LocalDB, installs headless Chromium, runs every test, enforces coverage, publishes a coverage table to the job summary, and uploads TRX/Cobertura reports. The workflow and gate have been validated locally; hosted Actions results have not been verified in this hosting-preparation run.
 
-Live External ID second-account isolation, actual tenant sign-out, and actual token renewal still need a tenant acceptance check. The automated tests verify the application's behavior around those boundaries, and real sign-in/creation has already been checked locally, but they do not prove the external tenant configuration or provider availability. Cross-browser/device coverage, performance/load behavior, and future Azure/MAUI deployment behavior are separate milestones.
+The owner reports completing live External ID second-account isolation, actual tenant sign-out, and token renewal checks on October 2, 2026. The automated tests verify the application's behavior around those boundaries, but do not prove ongoing provider availability. Cross-browser/device coverage, performance/load behavior, and Azure/MAUI deployment behavior are separate milestones.
 
 Implementation references: [Coverlet collector settings](https://github.com/coverlet-coverage/coverlet/blob/master/Documentation/VSTestIntegration.md), [ASP.NET Core test hosting with Kestrel](https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.mvc.testing.webapplicationfactory-1.usekestrel?view=aspnetcore-10.0), [Playwright installation](https://playwright.dev/dotnet/docs/library), and [Windows runner software](https://github.com/actions/runner-images/blob/main/images/windows/Windows2022-Readme.md).

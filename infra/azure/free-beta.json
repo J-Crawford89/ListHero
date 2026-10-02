@@ -1,0 +1,355 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "centralus",
+      "allowedValues": [
+        "centralus"
+      ]
+    },
+    "nameSuffix": {
+      "type": "string",
+      "defaultValue": "[uniqueString(subscription().subscriptionId, 'listhero-beta')]",
+      "minLength": 4,
+      "maxLength": 20
+    },
+    "sqlAdminPassword": {
+      "type": "securestring"
+    },
+    "apiDatabasePassword": {
+      "type": "securestring"
+    },
+    "cacheDatabasePassword": {
+      "type": "securestring"
+    },
+    "webClientSecret": {
+      "type": "securestring"
+    },
+    "apiProtectionCertificate": {
+      "type": "securestring"
+    },
+    "webProtectionCertificate": {
+      "type": "securestring"
+    },
+    "protectionCertificatePassword": {
+      "type": "securestring"
+    }
+  },
+  "variables": {
+    "planName": "asp-listhero-beta",
+    "webName": "[concat('listhero-', parameters('nameSuffix'))]",
+    "apiName": "[concat('listhero-api-', parameters('nameSuffix'))]",
+    "sqlName": "[concat('sql-listhero-', parameters('nameSuffix'))]",
+    "databaseName": "ListHeroBeta",
+    "tenantId": "59a74a72-2c96-4981-9475-6b968a271e4a",
+    "webClientId": "e9f6c3be-abaf-41a7-950b-6cf638107b37",
+    "apiClientId": "975cdad9-848c-4431-8270-82f314890941"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2024-04-01",
+      "name": "[variables('planName')]",
+      "location": "[parameters('location')]",
+      "kind": "app",
+      "sku": {
+        "name": "F1",
+        "tier": "Free",
+        "capacity": 1
+      },
+      "properties": {
+        "reserved": false
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2023-08-01",
+      "name": "[variables('sqlName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "version": "12.0",
+        "administratorLogin": "ListHeroBootstrap",
+        "administratorLoginPassword": "[parameters('sqlAdminPassword')]",
+        "minimalTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2023-08-01",
+      "name": "[concat(variables('sqlName'), '/', variables('databaseName'))]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sqlName'))]"
+      ],
+      "sku": {
+        "name": "GP_S_Gen5_2",
+        "tier": "GeneralPurpose",
+        "family": "Gen5",
+        "capacity": 2
+      },
+      "properties": {
+        "createMode": "Default",
+        "useFreeLimit": true,
+        "freeLimitExhaustionBehavior": "AutoPause",
+        "maxSizeBytes": 34359738368,
+        "minCapacity": 0.5,
+        "autoPauseDelay": 60,
+        "requestedBackupStorageRedundancy": "Local",
+        "zoneRedundant": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2024-04-01",
+      "name": "[variables('webName')]",
+      "location": "[parameters('location')]",
+      "kind": "app",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
+        "httpsOnly": true,
+        "clientAffinityEnabled": true,
+        "siteConfig": {
+          "alwaysOn": false,
+          "use32BitWorkerProcess": true,
+          "webSocketsEnabled": true,
+          "netFrameworkVersion": "v10.0",
+          "minTlsVersion": "1.2",
+          "scmMinTlsVersion": "1.2",
+          "ftpsState": "Disabled",
+          "appSettings": [
+            {
+              "name": "ASPNETCORE_ENVIRONMENT",
+              "value": "Production"
+            },
+            {
+              "name": "Authentication__Enabled",
+              "value": "true"
+            },
+            {
+              "name": "EntraExternalId__Instance",
+              "value": "https://listheroidentity.ciamlogin.com/"
+            },
+            {
+              "name": "EntraExternalId__TenantId",
+              "value": "[variables('tenantId')]"
+            },
+            {
+              "name": "DataProtection__RequirePersistentKeys",
+              "value": "true"
+            },
+            {
+              "name": "WEBSITE_LOAD_USER_PROFILE",
+              "value": "1"
+            },
+            {
+              "name": "DataProtection__CertificatePassword",
+              "value": "[parameters('protectionCertificatePassword')]"
+            },
+            {
+              "name": "WEBSITE_RUN_FROM_PACKAGE",
+              "value": "1"
+            },
+            {
+              "name": "SCM_MAX_ZIP_PACKAGE_COUNT",
+              "value": "1"
+            },
+            {
+              "name": "WEBSITE_DISABLE_OVERLAPPED_RECYCLING",
+              "value": "1"
+            },
+            {
+              "name": "EntraExternalId__ClientId",
+              "value": "[variables('webClientId')]"
+            },
+            {
+              "name": "DataProtection__CertificateBase64",
+              "value": "[parameters('webProtectionCertificate')]"
+            },
+            {
+              "name": "EntraExternalId__ClientSecret",
+              "value": "[parameters('webClientSecret')]"
+            },
+            {
+              "name": "ListHeroApi__BaseUrl",
+              "value": "[concat('https://', variables('apiName'), '.azurewebsites.net/')]"
+            },
+            {
+              "name": "ListHeroApi__Scopes__0",
+              "value": "[concat('api://', variables('apiClientId'), '/access_as_user')]"
+            },
+            {
+              "name": "Sharing__PublicWebBaseUrl",
+              "value": "[concat('https://', variables('webName'), '.azurewebsites.net/')]"
+            },
+            {
+              "name": "ConnectionStrings__TokenCache",
+              "value": "[concat('Server=tcp:', variables('sqlName'), '.database.windows.net,1433;Database=', variables('databaseName'), ';User ID=ListHeroCache;Password=', parameters('cacheDatabasePassword'), ';Encrypt=True;TrustServerCertificate=False;Pooling=False;Connect Timeout=60;ConnectRetryCount=3;ConnectRetryInterval=10;')]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2024-04-01",
+      "name": "[variables('apiName')]",
+      "location": "[parameters('location')]",
+      "kind": "app",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]"
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
+        "httpsOnly": true,
+        "clientAffinityEnabled": false,
+        "siteConfig": {
+          "alwaysOn": false,
+          "use32BitWorkerProcess": true,
+          "webSocketsEnabled": false,
+          "netFrameworkVersion": "v10.0",
+          "minTlsVersion": "1.2",
+          "scmMinTlsVersion": "1.2",
+          "ftpsState": "Disabled",
+          "appSettings": [
+            {
+              "name": "ASPNETCORE_ENVIRONMENT",
+              "value": "Production"
+            },
+            {
+              "name": "Authentication__Enabled",
+              "value": "true"
+            },
+            {
+              "name": "EntraExternalId__Instance",
+              "value": "https://listheroidentity.ciamlogin.com/"
+            },
+            {
+              "name": "EntraExternalId__TenantId",
+              "value": "[variables('tenantId')]"
+            },
+            {
+              "name": "DataProtection__RequirePersistentKeys",
+              "value": "true"
+            },
+            {
+              "name": "WEBSITE_LOAD_USER_PROFILE",
+              "value": "1"
+            },
+            {
+              "name": "DataProtection__CertificatePassword",
+              "value": "[parameters('protectionCertificatePassword')]"
+            },
+            {
+              "name": "WEBSITE_RUN_FROM_PACKAGE",
+              "value": "1"
+            },
+            {
+              "name": "SCM_MAX_ZIP_PACKAGE_COUNT",
+              "value": "1"
+            },
+            {
+              "name": "WEBSITE_DISABLE_OVERLAPPED_RECYCLING",
+              "value": "1"
+            },
+            {
+              "name": "EntraExternalId__ClientId",
+              "value": "[variables('apiClientId')]"
+            },
+            {
+              "name": "DataProtection__CertificateBase64",
+              "value": "[parameters('apiProtectionCertificate')]"
+            },
+            {
+              "name": "ConnectionStrings__ListHero",
+              "value": "[concat('Server=tcp:', variables('sqlName'), '.database.windows.net,1433;Database=', variables('databaseName'), ';User ID=ListHeroApi;Password=', parameters('apiDatabasePassword'), ';Encrypt=True;TrustServerCertificate=False;Pooling=False;Connect Timeout=60;ConnectRetryCount=3;ConnectRetryInterval=10;')]"
+            },
+            {
+              "name": "Database__EnableRetryOnFailure",
+              "value": "true"
+            },
+            {
+              "name": "Authentication__RequiredScope",
+              "value": "access_as_user"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(variables('webName'), '/ftp')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('webName'))]"
+      ],
+      "properties": {
+        "allow": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(variables('webName'), '/scm')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('webName'))]"
+      ],
+      "properties": {
+        "allow": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(variables('apiName'), '/ftp')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('apiName'))]"
+      ],
+      "properties": {
+        "allow": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(variables('apiName'), '/scm')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('apiName'))]"
+      ],
+      "properties": {
+        "allow": false
+      }
+    }
+  ],
+  "outputs": {
+    "webName": {
+      "type": "string",
+      "value": "[variables('webName')]"
+    },
+    "apiName": {
+      "type": "string",
+      "value": "[variables('apiName')]"
+    },
+    "sqlName": {
+      "type": "string",
+      "value": "[variables('sqlName')]"
+    },
+    "databaseName": {
+      "type": "string",
+      "value": "[variables('databaseName')]"
+    },
+    "webUrl": {
+      "type": "string",
+      "value": "[concat('https://', variables('webName'), '.azurewebsites.net/')]"
+    },
+    "apiUrl": {
+      "type": "string",
+      "value": "[concat('https://', variables('apiName'), '.azurewebsites.net/')]"
+    }
+  }
+}

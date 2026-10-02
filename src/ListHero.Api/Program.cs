@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Identity.Web;
+using ListHero.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 var authenticationEnabled = builder.Configuration.GetValue<bool>("Authentication:Enabled");
@@ -56,7 +57,8 @@ builder.Services.AddHealthChecks();
 builder.Services.AddListHeroApplication();
 var connectionString = builder.Configuration.GetConnectionString("ListHero")
     ?? throw new InvalidOperationException("A ListHero SQL Server connection string is required.");
-builder.Services.AddListHeroInfrastructure(connectionString);
+builder.Services.AddListHeroInfrastructure(connectionString, builder.Configuration.GetValue<bool>("Database:EnableRetryOnFailure"));
+builder.Services.AddHostedDataProtection(builder.Configuration, "ListHero.Api");
 
 var app = builder.Build();
 app.UseExceptionHandler();

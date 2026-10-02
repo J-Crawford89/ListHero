@@ -12,9 +12,12 @@ namespace ListHero.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddListHeroInfrastructure(this IServiceCollection services, string connectionString)
+    public static IServiceCollection AddListHeroInfrastructure(this IServiceCollection services, string connectionString, bool enableRetryOnFailure = false)
     {
-        services.AddDbContext<ListHeroDbContext>(options => options.UseSqlServer(connectionString));
+        services.AddDbContext<ListHeroDbContext>(options => options.UseSqlServer(connectionString, sql =>
+        {
+            if (enableRetryOnFailure) sql.EnableRetryOnFailure(6, TimeSpan.FromSeconds(10), null);
+        }));
         services.AddDataProtection().SetApplicationName("ListHero.Api");
         services.AddSingleton<ICapabilityTokenService, CapabilityTokenService>();
         services.AddScoped<IUserStore, EfUserStore>();

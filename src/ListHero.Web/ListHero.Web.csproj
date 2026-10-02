@@ -11,5 +11,7 @@
     <ProjectReference Include="../ListHero.Client.Api/ListHero.Client.Api.csproj" />
     <PackageReference Include="Microsoft.Identity.Web" />
     <PackageReference Include="Microsoft.Identity.Web.UI" />
+    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" />
+    <Compile Include="../Hosting/HostedDataProtection.cs" Link="Hosting/HostedDataProtection.cs" />
   </ItemGroup>
 </Project>

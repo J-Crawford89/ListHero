@@ -13,5 +13,6 @@
     <ProjectReference Include="../ListHero.Infrastructure/ListHero.Infrastructure.csproj" />
     <PackageReference Include="Microsoft.Identity.Web" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <Compile Include="../Hosting/HostedDataProtection.cs" Link="Hosting/HostedDataProtection.cs" />
   </ItemGroup>
 </Project>
