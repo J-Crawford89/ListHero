@@ -1,0 +1,213 @@
+@page "/lists/{ListId:guid}"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inherits ListHero.UI.Components.OwnerPageBase
+@inject NavigationManager Navigation
+@using ListHero.UI.Components
+@using System.Globalization
+
+<PageTitle>@(list?.Name ?? "My list") — List Hero</PageTitle>
+<section class="content-page">
+    <a class="back-link" href="/lists">← My lists</a>
+    <p class="eyebrow">WISHES, ASSEMBLE!</p>
+    <h1>@(list?.Name ?? "Your list")</h1>
+    <RequestFeedback Error="@Error" RequiresSignIn="RequiresSignIn" />
+    @if (list is null)
+    {
+        <p aria-live="polite">@(IsBusy ? "Loading your list…" : "This list could not be loaded.")</p>
+        @if (!IsBusy) { <button class="button-secondary" @onclick="LoadAsync">Try again</button> }
+    }
+    else
+    {
+        <p class="list-description">@list.Description</p>
+        <p><span class="private-badge">@(list.IsPublic ? "Public" : "Private")</span></p>
+        <div class="action-row">
+            <button class="button-secondary" disabled="@IsBusy" @onclick="BeginListEdit">Edit list</button>
+            <button class="button-secondary" disabled="@IsBusy" @onclick="LoadAsync">Reload saved list</button>
+            <button class="button-secondary" disabled="@IsBusy" @onclick="() => removeList = true">Remove list</button>
+        </div>
+        @if (removeList)
+        {
+            <div class="confirmation" role="alert"><p>Remove this list? It will disappear for you and anyone viewing it. Its history will be retained.</p>
+                <button class="button-secondary" disabled="@IsBusy" @onclick="ArchiveListAsync">Remove list</button>
+                <button class="button-secondary" disabled="@IsBusy" @onclick="() => removeList = false">Cancel</button>
+            </div>
+        }
+        @if (editingList)
+        {
+            <EditForm Model="listDraft" OnValidSubmit="SaveListAsync" FormName="edit-list" id="edit-list-form" class="form-card">
+                <DataAnnotationsValidator /><ValidationSummary /><fieldset disabled="@IsBusy">
+                    <label for="edit-list-name">List name</label><InputText id="edit-list-name" @bind-Value="listDraft.Name" maxlength="200" />
+                    <label for="edit-list-description">Description</label><InputTextArea id="edit-list-description" @bind-Value="listDraft.Description" maxlength="4000" />
+                    <label><InputCheckbox @bind-Value="listDraft.IsPublic" /> Make this list public</label>
+                    <p>Public lists can be viewed by anyone with the address. Private lists require an active share link.</p>
+                    @if (listDraft.RowVersion != list.RowVersion)
+                    {
+                        <p class="confirmation">The saved list has changed. Review the saved details, then choose whether to apply your draft over that version.</p>
+                        <button type="button" class="button-secondary" @onclick="() => listDraft.RowVersion = list.RowVersion">Use refreshed version and keep my draft</button>
+                    }
+                    <button class="button-primary" type="submit">Save list</button>
+                    <button class="button-secondary" type="button" @onclick="() => editingList = false">Cancel</button>
+                </fieldset>
+            </EditForm>
+        }
+        <div class="workspace-grid">
+            <div>
+                @if (list.Items.Count == 0)
+                {
+                    <div class="empty-state"><img class="empty-mascot" src="_content/ListHero.UI/images/list-hero-mascot-final-v1.png" width="1024" height="1536" alt="" /><div><span class="panel-kicker">BLANK PAGE. BIG POSSIBILITIES.</span><h2>What are you wishing for?</h2><p>Add your first item to get this list started.</p></div></div>
+                }
+                @foreach (var item in list.Items)
+                {
+                    <article class="wish-card" @key="item.Id">
+                        @if (item.ImageUrl is not null) { <img src="@item.ImageUrl" alt="" loading="lazy" referrerpolicy="no-referrer" /> }
+                        <div><h2>@item.Name</h2><p>@item.Description</p>
+                            <p class="item-details">Quantity: @item.DesiredQuantity · Priority: @item.Priority · Order: @item.DisplayOrder
+                                @if (item.ApproximateUnitPrice is double price) { <span> · About @price.ToString("C2", CultureInfo.GetCultureInfo("en-US")) each</span> }
+                            </p>
+                            @if (item.Url is not null) { <a href="@item.Url" target="_blank" rel="noopener noreferrer">View item ↗</a> }
+                            <div class="action-row">
+                                <button type="button" class="button-secondary edit-item" disabled="@IsBusy" @onclick="() => BeginItemEditAsync(item)">Edit item</button>
+                                <button type="button" class="button-secondary remove-item" disabled="@IsBusy" @onclick="() => removingItem = item">Remove item</button>
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+            <aside class="form-card">
+                @if (removingItem is not null)
+                {
+                    <div class="confirmation" role="alert"><p>Remove @removingItem.Name? It will disappear from the list. Its history will be retained.</p>
+                        <button type="button" class="button-secondary" disabled="@IsBusy" @onclick="ArchiveItemAsync">Remove item</button>
+                        <button type="button" class="button-secondary" disabled="@IsBusy" @onclick="() => removingItem = null">Cancel</button>
+                    </div>
+                }
+                @if (editingItem is not null)
+                {
+                    <h2>Edit a wish</h2>
+                    @if (editWarning)
+                    {
+                        <p class="confirmation" role="status">Someone may already have chosen this item as a gift. Updating the price, photo, or quantity is usually fine. If you're replacing it with a different gift, consider removing this item and adding a new one.</p>
+                    }
+                    <EditForm Model="itemDraft" OnValidSubmit="SaveItemAsync" FormName="edit-item" id="edit-item-form">
+                        <DataAnnotationsValidator /><ValidationSummary /><fieldset disabled="@IsBusy">
+                            <WishItemFields Model="itemDraft" Prefix="edit-item" />
+                            @if (list.Items.FirstOrDefault(item => item.Id == editingItem) is { } savedItem && savedItem.RowVersion != itemDraft.RowVersion)
+                            {
+                                <p class="confirmation">This saved item has changed. Review its details before applying your draft over that version.</p>
+                                <button type="button" class="button-secondary" @onclick="() => itemDraft.RowVersion = savedItem.RowVersion">Use refreshed version and keep my draft</button>
+                            }
+                            <button class="button-primary" type="submit">Save item</button>
+                            <button class="button-secondary" type="button" @onclick="() => editingItem = null">Cancel</button>
+                        </fieldset>
+                    </EditForm>
+                }
+                else
+                {
+                <h2>Add a wish</h2>
+                <EditForm Model="draft" OnValidSubmit="AddAsync" FormName="add-item" id="add-item-form">
+                    <DataAnnotationsValidator /><ValidationSummary />
+                    <fieldset disabled="@IsBusy">
+                        <WishItemFields Model="draft" />
+                        <button class="button-primary" type="submit">@(IsBusy ? "Please wait…" : "Add item")</button>
+                    </fieldset>
+                </EditForm>
+                }
+            </aside>
+        </div>
+        <ShareLinkManager ListId="@ListId" IsPublic="@list.IsPublic" @key="ListId" />
+    }
+</section>
+
+@code {
+    [Parameter] public Guid ListId { get; set; }
+    private OwnerWishListResponse? list;
+    private CreateWishListItemRequest draft = new();
+    private Guid requestedId;
+    private bool needsLoad;
+    private bool editingList, removeList, editWarning;
+    private Guid? editingItem;
+    private WishListItemResponse? removingItem;
+    private UpdateWishListRequest listDraft = new();
+    private UpdateWishListItemRequest itemDraft = new();
+    protected override void OnParametersSet()
+    {
+        if (requestedId == ListId) return;
+        requestedId = ListId;
+        list = null;
+        draft = new();
+        editingList = removeList = editWarning = false;
+        editingItem = null;
+        removingItem = null;
+        needsLoad = true;
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (needsLoad && !IsBusy)
+        {
+            needsLoad = false;
+            await LoadAsync();
+        }
+    }
+    private Task LoadAsync() => RunAsync(async () =>
+    {
+        var loadingId = ListId;
+        var result = await Api.GetOwnerViewAsync(loadingId, Cancellation);
+        if (ListId == loadingId) list = result;
+    });
+    private Task AddAsync() => RunAsync(async () =>
+    {
+        var savingId = ListId;
+        var result = await Api.AddItemAsync(savingId, draft, Cancellation);
+        if (ListId == savingId) { list = result; draft = new(); }
+    });
+    private void BeginListEdit()
+    {
+        if (list is null) return;
+        listDraft = new() { Name = list.Name, Description = list.Description, IsPublic = list.IsPublic, RowVersion = list.RowVersion };
+        editingList = true;
+    }
+    private Task SaveListAsync() => RunAsync(async () =>
+    {
+        var id = ListId;
+        var result = await Api.UpdateAsync(id, listDraft, Cancellation);
+        if (id == ListId) { list = result; editingList = false; }
+    });
+    private Task ArchiveListAsync() => RunAsync(async () =>
+    {
+        var id = ListId;
+        await Api.ArchiveAsync(id, new() { RowVersion = list!.RowVersion }, Cancellation);
+        if (id == ListId && !IsDisposed) Navigation.NavigateTo("/lists");
+    });
+    private Task BeginItemEditAsync(WishListItemResponse item) => RunAsync(async () =>
+    {
+        var id = ListId;
+        var warning = await Api.EditWarningAsync(id, item.Id, Cancellation);
+        if (id != ListId) return;
+        itemDraft = new() { Name = item.Name, Description = item.Description, ApproximateUnitPrice = item.ApproximateUnitPrice,
+            DesiredQuantity = item.DesiredQuantity, Priority = item.Priority, DisplayOrder = item.DisplayOrder,
+            Url = item.Url, ImageUrl = item.ImageUrl, RowVersion = item.RowVersion };
+        editWarning = warning.MayHavePurchaseMarks;
+        editingItem = item.Id;
+    });
+    private Task SaveItemAsync() => RunAsync(async () =>
+    {
+        var id = ListId;
+        var result = await Api.UpdateItemAsync(id, editingItem!.Value, itemDraft, Cancellation);
+        if (id == ListId) { list = result; editingItem = null; }
+    });
+    private Task ArchiveItemAsync() => RunAsync(async () =>
+    {
+        var id = ListId;
+        var item = removingItem!;
+        var result = await Api.ArchiveItemAsync(id, item.Id, new() { RowVersion = item.RowVersion }, Cancellation);
+        if (id == ListId) { list = result; removingItem = null; if (editingItem == item.Id) editingItem = null; }
+    });
+}
+
+
+
+
+
+
+
+

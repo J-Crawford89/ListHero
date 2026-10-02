@@ -1,0 +1,54 @@
+@page "/"
+@inject IHostPresentation Host
+
+<PageTitle>List Hero — small wishes, super gifts</PageTitle>
+<section class="hero">
+    <div class="hero-copy">
+        <p class="eyebrow">THE EVERYDAY GIFTING SUPERPOWER</p>
+        <h1>Small wishes.<br /><span>Super gifts.</span></h1>
+        <p class="hero-description">You make the wish list. Your people bring the magic. Keep your favorite things together, share a little inspiration, and leave room for a surprise.</p>
+        @if (Host.CanSignIn)
+        {
+            <AuthorizeView><Authorized><a class="button-primary hero-cta" href="/lists">To my lists <span aria-hidden="true">→</span></a></Authorized>
+                <NotAuthorized><a class="button-primary hero-cta" href="@Host.SignInUrl" data-enhance-nav="false">Make your first list <span aria-hidden="true">→</span></a></NotAuthorized></AuthorizeView>
+        }
+        else
+        {
+            <span class="coming-soon">A new hero is on the way. Your wishes are next.</span>
+        }
+        <div class="hero-points"><span>Private by default</span><span>Easy to share</span><span>Surprise intact</span></div>
+    </div>
+    <div class="hero-art">
+        <span class="comic-caption">EVERY HERO NEEDS A LIST.</span>
+        <span class="hero-spark spark-one" aria-hidden="true">✦</span>
+        <span class="hero-spark spark-two" aria-hidden="true">✧</span>
+        <img class="hero-mascot" src="_content/ListHero.UI/images/list-hero-mascot-final-v1.png" width="1024" height="1536" fetchpriority="high" alt="List Hero: a skinny, bespectacled superhero in a baggy costume, writing in a notebook with an enormous pencil." />
+        <span class="comic-note">Big pencil energy.</span>
+    </div>
+</section>
+<section class="how-it-works" aria-labelledby="how-heading">
+    <div class="section-intro"><p class="eyebrow">YOUR ORIGIN STORY</p><h2 id="how-heading">Three steps. Hero status.</h2><p>For birthdays, holidays, and the occasional just-because.</p></div>
+    <div class="step-panels">
+        <article class="step-panel"><span class="step-number" aria-hidden="true">01</span><h3>Dream it up.</h3><p>A book, new boots, that very specific mug. Give your wishes a home.</p></article>
+        <article class="step-panel"><span class="step-number" aria-hidden="true">02</span><h3>Assemble your people.</h3><p>Share a private link, or make your list public. You're in charge.</p></article>
+        <article class="step-panel"><span class="step-number" aria-hidden="true">03</span><h3>Let them save the day.</h3><p>Gift-givers can mark what they've chosen. You get to keep the surprise.</p></article>
+    </div>
+</section>
+<section class="inspiration-section" aria-labelledby="inspiration-heading">
+    <div class="inspiration-copy"><p class="eyebrow">LESS GUESSWORK. MORE JOY.</p><h2 id="inspiration-heading">Even the little things<br />deserve a great list.</h2><p>No mind reading. No lost notes. Just a few good ideas for the people who want to make your day.</p><span class="comic-sticker">Thoughtfulness<br />is a superpower.</span></div>
+    <div class="sample-list" aria-label="Example wish list">
+        <div class="sample-list-top"><span class="sample-label">A LITTLE INSPIRATION</span><span class="private-badge">Private</span></div>
+        <h2>A few favorite things</h2><p>For little celebrations and just because.</p>
+        <div class="sample-item"><span class="item-icon" aria-hidden="true">☕</span><div><strong>The everyday mug</strong><span>For my next great idea.</span></div><span class="sample-price">$24</span></div>
+        <div class="sample-item"><span class="item-icon" aria-hidden="true">📚</span><div><strong>A new adventure</strong><span>The next book on my reading list.</span></div><span class="sample-price">$18</span></div>
+        <div class="sample-item"><span class="item-icon" aria-hidden="true">🌿</span><div><strong>A little more green</strong><span>A sidekick for my favorite corner.</span></div><span class="sample-price">$32</span></div>
+        <div class="sample-list-bottom">A sample list. Your story is yours to write.</div>
+    </div>
+</section>
+
+
+
+
+
+
+

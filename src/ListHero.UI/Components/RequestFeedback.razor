@@ -1,0 +1,15 @@
+@inject IHostPresentation Host
+@if (Error is not null)
+{
+    <div class="request-error" role="alert">
+        <p>@Error</p>
+        @if (RequiresSignIn && Host.CanSignIn)
+        {
+            <a href="@Host.SignInUrl" data-enhance-nav="false">Sign in to continue</a>
+        }
+    </div>
+}
+@code {
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public bool RequiresSignIn { get; set; }
+}

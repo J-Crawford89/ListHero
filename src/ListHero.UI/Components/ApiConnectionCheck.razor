@@ -1,0 +1,18 @@
+@inject IAppStatusService StatusService
+
+<button type="button" class="button-primary" @onclick="CheckAsync" disabled="@_checking">
+    @(_checking ? "Checking…" : "Check API connection")
+</button>
+<p role="status" aria-live="polite">@_message</p>
+
+@code {
+    private bool _checking;
+    private string _message = "The API must be running for this check.";
+
+    private async Task CheckAsync()
+    {
+        _checking = true;
+        try { _message = (await StatusService.CheckAsync()).Message; }
+        finally { _checking = false; }
+    }
+}

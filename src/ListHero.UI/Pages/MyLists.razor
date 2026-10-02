@@ -1,0 +1,74 @@
+@page "/lists"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inherits ListHero.UI.Components.OwnerPageBase
+@inject NavigationManager Navigation
+@using ListHero.UI.Components
+
+<PageTitle>My lists — List Hero</PageTitle>
+<section class="content-page">
+    <p class="eyebrow">YOUR HERO HEADQUARTERS</p>
+    <h1>My lists</h1>
+    <p class="page-introduction">Big dreams, little wishes, and your next great celebration.</p>
+    <RequestFeedback Error="@Error" RequiresSignIn="RequiresSignIn" />
+    <div class="workspace-grid">
+        <div>
+            @if (lists is null)
+            {
+                <p aria-live="polite">@(IsBusy ? "Loading your lists…" : "Your lists could not be loaded.")</p>
+                @if (!IsBusy) { <button class="button-secondary" @onclick="LoadAsync">Try again</button> }
+            }
+            else if (lists.Count == 0)
+            {
+                <div class="empty-state"><img class="empty-mascot" src="_content/ListHero.UI/images/list-hero-mascot-final-v1.png" width="1024" height="1536" alt="" /><div><span class="panel-kicker">READY WHEN YOU ARE</span><h2>Your first wish starts here.</h2><p>Create a list for a birthday, a celebration, or just because.</p></div></div>
+            }
+            else
+            {
+                <div class="list-cards">
+                    @foreach (var list in lists)
+                    {
+                        <a class="list-card" href="@($"/lists/{list.Id}")" @key="list.Id">
+                            <span class="private-badge">@(list.IsPublic ? "Public" : "Private")</span>
+                            <h2>@list.Name</h2><p>@list.Description</p><span>Open list →</span>
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+        <aside class="form-card">
+            <span class="panel-kicker">THE NEXT ADVENTURE</span>
+            <h2>Make a new list</h2>
+            <p>It starts private. Give it a name that feels like you.</p>
+            <EditForm Model="draft" OnValidSubmit="CreateAsync" FormName="create-list">
+                <DataAnnotationsValidator /><ValidationSummary />
+                <fieldset disabled="@IsBusy">
+                    <label for="list-name">Name</label><InputText id="list-name" @bind-Value="draft.Name" maxlength="200" autocomplete="off" />
+                    <label for="list-description">Description</label><InputTextArea id="list-description" @bind-Value="draft.Description" maxlength="4000" rows="4" />
+                    <button class="button-primary" type="submit">@(IsBusy ? "Please wait…" : "Create list")</button>
+                </fieldset>
+            </EditForm>
+        </aside>
+    </div>
+</section>
+
+@code {
+    private IReadOnlyList<WishListSummaryResponse>? lists;
+    private readonly CreateWishListRequest draft = new();
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await LoadAsync();
+    }
+    private Task LoadAsync() => RunAsync(async () => lists = await Api.GetMineAsync(Cancellation));
+    private Task CreateAsync() => RunAsync(async () =>
+    {
+        var created = await Api.CreateAsync(draft, Cancellation);
+        if (!IsDisposed) Navigation.NavigateTo($"/lists/{created.Id}");
+    });
+}
+
+
+
+
+
+
+
+

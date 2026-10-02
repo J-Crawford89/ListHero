@@ -1,0 +1,28 @@
+@inherits LayoutComponentBase
+@inject IHostPresentation Host
+
+<a class="skip-link" href="#main-content">Skip to content</a>
+<header class="site-header">
+    <a class="brand" href="/" aria-label="List Hero home"><span class="brand-mark" aria-hidden="true">LH</span><span>List <strong>Hero</strong><small>Small wishes. Super gifts.</small></span></a>
+    <AuthorizeView><Authorized>
+        <div class="account-navigation">
+            <a href="/lists">My lists</a>
+            @if (Host.CanSignIn)
+            {
+                <form action="@Host.SignOutUrl" method="post">
+                    <AntiforgeryToken />
+                    <button type="submit">Sign out</button>
+                </form>
+            }
+        </div>
+    </Authorized>
+        <NotAuthorized><div class="account-navigation"><span class="header-note">Your gifting superpower.</span>
+            @if (Host.CanSignIn) { <a class="button-secondary" href="@Host.SignInUrl" data-enhance-nav="false">Sign in</a> }
+        </div></NotAuthorized></AuthorizeView>
+</header>
+<main id="main-content" tabindex="-1">@Body</main>
+<footer class="site-footer"><span><strong>List Hero</strong> · A little help for your everyday heroes.</span><span class="footer-note">No superpowers required.</span></footer>
+<div id="blazor-error-ui" data-nosnippet>
+    Something went wrong. <a href="." class="reload">Reload</a>
+    <button type="button" class="dismiss" aria-label="Dismiss">×</button>
+</div>

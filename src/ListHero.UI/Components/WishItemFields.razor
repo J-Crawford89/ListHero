@@ -1,0 +1,13 @@
+<label for="@(Prefix + "-name")">Name</label><InputText id="@(Prefix + "-name")" @bind-Value="Model.Name" maxlength="200" />
+<label for="@(Prefix + "-description")">Description</label><InputTextArea id="@(Prefix + "-description")" @bind-Value="Model.Description" maxlength="4000" rows="3" />
+<label for="@(Prefix + "-price")">Approximate price per item ($, optional)</label><InputNumber id="@(Prefix + "-price")" @bind-Value="Model.ApproximateUnitPrice" min="0" step="any" />
+<label for="@(Prefix + "-quantity")">Quantity wanted</label><InputNumber id="@(Prefix + "-quantity")" @bind-Value="Model.DesiredQuantity" min="1" />
+<label for="@(Prefix + "-priority")">Priority (higher means more important)</label><InputNumber id="@(Prefix + "-priority")" @bind-Value="Model.Priority" />
+<label for="@(Prefix + "-order")">Display order (lower appears first)</label><InputNumber id="@(Prefix + "-order")" @bind-Value="Model.DisplayOrder" />
+<label for="@(Prefix + "-link")">Item link (optional)</label><InputText id="@(Prefix + "-link")" @bind-Value="Model.Url" maxlength="2048" />
+<label for="@(Prefix + "-image")">Image link (optional)</label><InputText id="@(Prefix + "-image")" @bind-Value="Model.ImageUrl" maxlength="2048" />
+
+@code {
+    [Parameter, EditorRequired] public CreateWishListItemRequest Model { get; set; } = default!;
+    [Parameter] public string Prefix { get; set; } = "item";
+}

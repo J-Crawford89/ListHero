@@ -1,0 +1,64 @@
+name: Build and test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore ListHero.slnx
+      - run: dotnet build ListHero.slnx --configuration Release --no-restore
+      - run: dotnet test ListHero.slnx --configuration Release --no-build --no-restore
+  sql-and-browser:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Start isolated SQL Server LocalDB
+        shell: pwsh
+        run: |
+          $taskLocalDb = Get-Command SqlLocalDB.exe -ErrorAction SilentlyContinue
+          if (!$taskLocalDb) {
+            $taskLocalDbPath = (Get-ChildItem 'C:/Program Files/Microsoft SQL Server/*/Tools/Binn/SqlLocalDB.exe' | Sort-Object FullName -Descending | Select-Object -First 1).FullName
+          } else {
+            $taskLocalDbPath = $taskLocalDb.Source
+          }
+          if (!$taskLocalDbPath) { throw 'SQL Server LocalDB is required for this job.' }
+          & $taskLocalDbPath start MSSQLLocalDB
+          if ($LASTEXITCODE -ne 0) { throw 'LocalDB did not start.' }
+          $taskDatabase = 'ListHero_Integration_' + [guid]::NewGuid().ToString('N')
+          "LISTHERO_TEST_SQL_CONNECTION=Server=(localdb)\MSSQLLocalDB;Database=$taskDatabase;Trusted_Connection=True;TrustServerCertificate=True" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          'LISTHERO_BROWSER_TESTS=1' | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - run: dotnet restore ListHero.slnx
+      - run: dotnet build ListHero.slnx --configuration Release --no-restore
+      - name: Install headless Chromium
+        shell: pwsh
+        run: ./tests/ListHero.Tests/bin/Release/net10.0/playwright.ps1 install chromium --only-shell
+      - name: Test SQL, browser workflows, and coverage
+        shell: pwsh
+        run: dotnet test ListHero.slnx --configuration Release --no-build --no-restore --settings coverage.runsettings --collect:"XPlat Code Coverage" --results-directory .artifacts/ci-coverage --logger "trx;LogFileName=coverage.trx"
+      - name: Enforce coverage and require every test to execute
+        shell: pwsh
+        run: |
+          $taskCoverage = Get-ChildItem .artifacts/ci-coverage -Recurse -Filter coverage.cobertura.xml
+          if (@($taskCoverage).Count -ne 1) { throw 'Expected one coverage report.' }
+          ./scripts/Test-Coverage.ps1 -CoverageFile $taskCoverage.FullName -TestResultsFile .artifacts/ci-coverage/coverage.trx -RequireAllTests
+      - name: Save test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sql-browser-coverage
+          path: .artifacts/ci-coverage
+          if-no-files-found: error

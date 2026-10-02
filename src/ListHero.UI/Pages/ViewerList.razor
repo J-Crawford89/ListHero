@@ -1,0 +1,153 @@
+@page "/view/{ListId:guid}"
+@inherits ListHero.UI.Components.RequestPageBase
+@using ListHero.UI.Components
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Routing
+@inject IListViewerClient Viewer
+@inject AuthenticationStateProvider Authentication
+@inject NavigationManager Navigation
+@inject IHostPresentation Host
+@inject TimeProvider Clock
+
+<PageTitle>@(list?.Name ?? "Wish list") — List Hero</PageTitle>
+<section class="content-page">
+    <p class="eyebrow">A LITTLE HELP FROM THEIR HEROES</p>
+    <h1>@(list?.Name ?? "Wish list")</h1>
+    <RequestFeedback Error="@Error" RequiresSignIn="RequiresSignIn" />
+    @if (notice is not null) { <p role="status" class="confirmation">@notice</p> }
+    @if (list is null)
+    {
+        <p aria-live="polite">@(IsBusy ? "Loading the list…" : "The list is unavailable.")</p>
+        <button class="button-secondary" disabled="@IsBusy" @onclick="LoadAsync">Try again</button>
+    }
+    else
+    {
+        <p class="list-description">@list.Description</p>
+        <p>Marks help everyone coordinate gifts. They don't confirm an actual purchase.</p>
+        <button class="button-secondary" disabled="@IsBusy" @onclick="LoadAsync">Refresh list</button>
+        @if (!list.CanMarkPurchases)
+        {
+            <p>You can view this list. Sign in or use an active share link to mark gifts.</p>
+            @if (Host.CanSignIn) { <a class="button-secondary" href="@($"{Host.SignInUrl}?listId={ListId}")" data-enhance-nav="false">Sign in</a> }
+        }
+        else if (!signedIn) { <p>Your marks are remembered in this browser. Keep the share link and browser storage to undo them later.</p> }
+        @if (list.Items.Count == 0) { <p>No wishes on this list yet.</p> }
+        @foreach (var entry in list.Items)
+        {
+            var item = entry.Item;
+            var draft = DraftFor(item.Id);
+            <article class="wish-card viewer-card" @key="item.Id">
+                @if (item.ImageUrl is not null) { <img src="@item.ImageUrl" alt="" loading="lazy" referrerpolicy="no-referrer" /> }
+                <div>
+                    <h2>@item.Name</h2><p>@item.Description</p>
+                    <p class="item-details">Wanted: @item.DesiredQuantity · Priority: @item.Priority
+                        @if (item.ApproximateUnitPrice is double price) { <span> · About @price.ToString("C2", CultureInfo.GetCultureInfo("en-US")) each</span> }
+                    </p>
+                    @if (item.Url is not null) { <a href="@item.Url" target="_blank" rel="noopener noreferrer">View item ↗</a> }
+                    <p class="fulfillment">@entry.PurchasedQuantity marked
+                        @if (entry.IsFulfilled) { <strong class="private-badge">Fulfilled</strong> }
+                        @if (entry.OverpurchasedBy > 0) { <span> · @entry.OverpurchasedBy over the requested quantity</span> }
+                    </p>
+                    @if (list.CanMarkPurchases)
+                    {
+                        <EditForm Model="draft.Request" OnValidSubmit="() => MarkAsync(item.Id)" FormName="@($"mark-{item.Id}")" class="mark-form">
+                            <DataAnnotationsValidator /><ValidationSummary />
+                            <label for="@($"quantity-{item.Id}")">Quantity you're marking</label>
+                            <InputNumber id="@($"quantity-{item.Id}")" @bind-Value="draft.Request.Quantity" min="1" disabled="@(IsBusy || draft.Attempted)" />
+                            <button class="button-primary" type="submit" disabled="@IsBusy">@(draft.Attempted ? "Retry this mark" : "Mark as purchased")</button>
+                        </EditForm>
+                    }
+                    @foreach (var mark in list.MyMarks?.Where(mark => mark.ItemId == item.Id) ?? [])
+                    {
+                        <div class="own-mark" @key="mark.Id"><span>You marked @mark.Quantity.</span>
+                            @if (list.CanMarkPurchases) { <button type="button" class="button-secondary" disabled="@IsBusy" @onclick="() => UndoAsync(mark)">Undo my mark</button> }
+                        </div>
+                    }
+                </div>
+            </article>
+        }
+    }
+</section>
+
+@code {
+    [Parameter] public Guid ListId { get; set; }
+    private ViewerWishListResponse? list;
+    private string? shareToken, notice, requestedLocation;
+    private Guid requestedListId;
+    private bool signedIn, needsLoad;
+    private readonly Dictionary<Guid, MarkDraft> drafts = new();
+    protected override void OnInitialized() => Navigation.LocationChanged += LocationChanged;
+    protected override void OnParametersSet() => QueueLoad();
+    private void QueueLoad()
+    {
+        if (requestedLocation == Navigation.Uri && requestedListId == ListId) return;
+        requestedLocation = Navigation.Uri;
+        requestedListId = ListId;
+        list = null; shareToken = null; notice = null; drafts.Clear(); needsLoad = true;
+    }
+    private void LocationChanged(object? sender, LocationChangedEventArgs args)
+        => _ = InvokeAsync(() => { if (!IsDisposed) { QueueLoad(); StateHasChanged(); } });
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (needsLoad && !IsBusy) { needsLoad = false; await LoadAsync(); }
+        if (firstRender) _ = PollAsync();
+    }
+    private Task LoadAsync() => RunAsync(LoadCoreAsync);
+    private async Task LoadCoreAsync()
+    {
+        var id = ListId;
+        var location = Navigation.Uri;
+        var fragment = new Uri(location).Fragment;
+        var token = fragment.Length > 1 ? Uri.UnescapeDataString(fragment[1..]) : null;
+        if (token is not null && (token.Length > 128 || token.Any(character => !char.IsAsciiLetterOrDigit(character) && character is not ('_' or '-'))))
+            throw new ApiRequestException("This share link is invalid.");
+        var authenticated = (await Authentication.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true;
+        var response = await Viewer.LoadAsync(id, authenticated, token, Cancellation);
+        if (id != ListId || location != Navigation.Uri || IsDisposed) return;
+        if (response.Owner is not null) { Navigation.NavigateTo($"/lists/{id}"); return; }
+        list = response.Viewer ?? throw new ApiRequestException("The API returned an empty list.");
+        signedIn = authenticated; shareToken = token;
+    }
+    private MarkDraft DraftFor(Guid itemId)
+    {
+        if (!drafts.TryGetValue(itemId, out var value)) drafts[itemId] = value = new();
+        return value;
+    }
+    private Task MarkAsync(Guid itemId) => RunAsync(async () =>
+    {
+        var id = ListId;
+        var location = Navigation.Uri;
+        var draft = DraftFor(itemId);
+        draft.Attempted = true;
+        var marked = await Viewer.MarkAsync(id, itemId, signedIn, shareToken, draft.Request, Cancellation);
+        if (id != ListId || location != Navigation.Uri) return;
+        drafts[itemId] = new();
+        notice = marked.UndoneAt.HasValue ? "This earlier mark was already undone." : $"You marked {marked.Quantity}. Thank you for helping coordinate gifts.";
+        await LoadCoreAsync();
+    });
+    private Task UndoAsync(OwnPurchaseMarkResponse mark) => RunAsync(async () =>
+    {
+        var id = ListId;
+        var location = Navigation.Uri;
+        await Viewer.UndoAsync(id, mark, signedIn, shareToken, Cancellation);
+        if (id != ListId || location != Navigation.Uri) return;
+        notice = "Your mark was undone.";
+        await LoadCoreAsync();
+    });
+    private async Task PollAsync()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(20), Clock);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(Cancellation))
+                await InvokeAsync(async () => { if (list is not null && !IsBusy && Error is null) await LoadAsync(); });
+        }
+        catch (OperationCanceledException) { }
+    }
+    public override void Dispose() { Navigation.LocationChanged -= LocationChanged; base.Dispose(); }
+    private sealed class MarkDraft
+    {
+        public CreatePurchaseMarkRequest Request { get; } = new() { IdempotencyKey = Guid.NewGuid() };
+        public bool Attempted { get; set; }
+    }
+}

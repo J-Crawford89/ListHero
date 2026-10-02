@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ListHero.Api/ListHero.Api.csproj" />
+    <Project Path="src/ListHero.Application/ListHero.Application.csproj" />
+    <Project Path="src/ListHero.Client.Api/ListHero.Client.Api.csproj" />
+    <Project Path="src/ListHero.Client/ListHero.Client.csproj" />
+    <Project Path="src/ListHero.Contracts/ListHero.Contracts.csproj" />
+    <Project Path="src/ListHero.Domain/ListHero.Domain.csproj" />
+    <Project Path="src/ListHero.Infrastructure/ListHero.Infrastructure.csproj" />
+    <Project Path="src/ListHero.UI/ListHero.UI.csproj" />
+    <Project Path="src/ListHero.Web/ListHero.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ListHero.Tests/ListHero.Tests.csproj" />
+  </Folder>
+</Solution>

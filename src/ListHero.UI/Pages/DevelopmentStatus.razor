@@ -1,0 +1,16 @@
+@page "/development/status"
+@inject IHostPresentation Host
+
+<PageTitle>List Hero development status</PageTitle>
+<section class="content-page">
+    @if (Host.IsDevelopment)
+    {
+        <h1>Development connection check</h1>
+        <p>This checks the UI → client service → HTTP client → API path. It does not check SQL Server or Entra sign-in.</p>
+        <ListHero.UI.Components.ApiConnectionCheck />
+    }
+    else
+    {
+        <h1>Page unavailable</h1>
+    }
+</section>

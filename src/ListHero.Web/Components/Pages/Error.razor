@@ -1,0 +1,18 @@
+@page "/Error"
+@using System.Diagnostics
+
+<PageTitle>Something went wrong — List Hero</PageTitle>
+<section class="content-page">
+    <h1>Something went wrong.</h1>
+    <p>Please try again in a moment.</p>
+    @if (!string.IsNullOrEmpty(_requestId))
+    {
+        <p>Reference: <code>@_requestId</code></p>
+    }
+    <a href="/">Back to List Hero</a>
+</section>
+
+@code {
+    private string? _requestId;
+    protected override void OnInitialized() => _requestId = Activity.Current?.Id;
+}

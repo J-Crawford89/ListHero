@@ -1,0 +1,83 @@
+@inherits RequestPageBase
+@inject IListCollaborationApi Sharing
+@inject IListShareUrlBuilder ShareUrls
+
+<section class="form-card sharing-card">
+    <span class="panel-kicker">ASSEMBLE YOUR PEOPLE</span>
+    <h2>Share this list</h2>
+    <p>Anyone with an active link can view this list and mark gifts. You can revoke each link separately.</p>
+    <RequestFeedback Error="@Error" RequiresSignIn="RequiresSignIn" />
+    @if (IsPublic)
+    {
+        <label for="public-url">Public list address</label><input id="public-url" readonly value="@PublicUrl" />
+        <p>Anyone can view this address. They need an account or an active share link to mark gifts.</p>
+    }
+    <form id="create-share-link" @onsubmit="CreateAsync" @onsubmit:preventDefault>
+        <fieldset disabled="@IsBusy">
+            <label><input type="checkbox" @bind="expires" /> Set an expiration</label>
+            @if (expires) { <label for="share-expiry">Expires (UTC)</label><input id="share-expiry" type="datetime-local" @bind="expiration" @bind:format="yyyy-MM-ddTHH:mm" required /> }
+            <button class="button-secondary" type="submit">Create share link</button>
+        </fieldset>
+    </form>
+    @if (links is null) { <p>@(IsBusy ? "Loading links…" : "Links could not be loaded.")</p> }
+    else if (links.Count == 0) { <p>No share links yet.</p> }
+    else
+    {
+        @foreach (var link in links)
+        {
+            <div class="share-entry" @key="link.Id">
+                <p>@(link.IsActive ? "Active" : link.RevokedAt.HasValue ? "Revoked" : "Expired") · @(link.ExpiresAt.HasValue ? $"Expires {link.ExpiresAt.Value.UtcDateTime:g} UTC" : "No expiration")</p>
+                @if (link.Token is not null)
+                {
+                    <label for="@($"share-{link.Id}")">Share address (select and copy)</label>
+                    <input id="@($"share-{link.Id}")" readonly value="@ShareUrl(link.Token)" />
+                    <button type="button" class="button-secondary" disabled="@IsBusy" @onclick="() => RevokeAsync(link.Id)">Revoke link</button>
+                }
+            </div>
+        }
+    }
+    <button type="button" class="button-secondary" disabled="@IsBusy" @onclick="LoadAsync">Refresh links</button>
+</section>
+
+@code {
+    [Parameter] public Guid ListId { get; set; }
+    [Parameter] public bool IsPublic { get; set; }
+    private IReadOnlyList<ShareLinkResponse>? links;
+    private Guid requestedId;
+    private bool needsLoad;
+    private bool expires;
+    private DateTime expiration = DateTime.UtcNow.AddDays(7);
+    private string PublicUrl => ShareUrls.Build(ListId);
+    private string ShareUrl(string token) => ShareUrls.Build(ListId, token);
+    protected override void OnParametersSet()
+    {
+        if (requestedId == ListId) return;
+        requestedId = ListId;
+        links = null;
+        needsLoad = true;
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (needsLoad && !IsBusy) { needsLoad = false; await LoadAsync(); }
+    }
+    private Task LoadAsync() => RunAsync(async () =>
+    {
+        var id = ListId;
+        var result = await Sharing.GetLinksAsync(id, Cancellation);
+        if (id == ListId) links = result;
+    });
+    private Task CreateAsync() => RunAsync(async () =>
+    {
+        var id = ListId;
+        await Sharing.CreateLinkAsync(id, new() { ExpiresAt = expires ? new DateTimeOffset(DateTime.SpecifyKind(expiration, DateTimeKind.Utc)) : null }, Cancellation);
+        var result = await Sharing.GetLinksAsync(id, Cancellation);
+        if (id == ListId) links = result;
+    });
+    private Task RevokeAsync(Guid linkId) => RunAsync(async () =>
+    {
+        var id = ListId;
+        await Sharing.RevokeLinkAsync(id, linkId, Cancellation);
+        var result = await Sharing.GetLinksAsync(id, Cancellation);
+        if (id == ListId) links = result;
+    });
+}

@@ -1,0 +1,11 @@
+{
+  "ListHero.Domain": { "line": 90, "branch": 85 },
+  "ListHero.Application": { "line": 95, "branch": 85 },
+  "ListHero.Infrastructure": { "line": 90, "branch": 60 },
+  "ListHero.Api": { "line": 95, "branch": 75 },
+  "ListHero.Contracts": { "line": 90, "branch": 90 },
+  "ListHero.Client": { "line": 90, "branch": 80 },
+  "ListHero.Client.Api": { "line": 95, "branch": 90 },
+  "ListHero.UI": { "line": 90, "branch": 80 },
+  "ListHero.Web": { "line": 80, "branch": 65 }
+}
