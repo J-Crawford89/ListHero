@@ -2,18 +2,28 @@ using ListHero.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
+if (args.Length > 1 || args.Length == 1 && args[0] != "--migrate-only")
+    throw new ArgumentException("The only supported option is --migrate-only.");
+var migrateOnly = args.Length == 1;
 var connectionString = Environment.GetEnvironmentVariable("LISTHERO_DEPLOY_ADMIN_CONNECTION")
     ?? throw new InvalidOperationException("The deployment connection is required.");
 var connectionSettings = new SqlConnectionStringBuilder(connectionString);
 if (connectionSettings.InitialCatalog != "ListHeroBeta")
     throw new InvalidOperationException("This deployment helper only targets the ListHeroBeta database.");
-var apiPassword = Environment.GetEnvironmentVariable("LISTHERO_DEPLOY_API_PASSWORD")
-    ?? throw new InvalidOperationException("The API database credential is required.");
-var cachePassword = Environment.GetEnvironmentVariable("LISTHERO_DEPLOY_CACHE_PASSWORD")
-    ?? throw new InvalidOperationException("The cache database credential is required.");
+if (migrateOnly && connectionSettings.DataSource != "tcp:sql-listhero-yj3pk6oimchdi.database.windows.net,1433")
+    throw new InvalidOperationException("CI migrations only target the existing beta SQL server.");
+var apiPassword = Environment.GetEnvironmentVariable("LISTHERO_DEPLOY_API_PASSWORD");
+var cachePassword = Environment.GetEnvironmentVariable("LISTHERO_DEPLOY_CACHE_PASSWORD");
+if (!migrateOnly && (string.IsNullOrEmpty(apiPassword) || string.IsNullOrEmpty(cachePassword)))
+    throw new InvalidOperationException("Both runtime database credentials are required for initial bootstrap.");
 await using (var database = new ListHeroDbContext(new DbContextOptionsBuilder<ListHeroDbContext>()
     .UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure(6, TimeSpan.FromSeconds(10), null)).Options))
     await database.Database.MigrateAsync();
+if (migrateOnly)
+{
+    Console.WriteLine("Beta database migrations completed; existing runtime users and credentials were preserved.");
+    return;
+}
 await using var connection = new SqlConnection(connectionString);
 await connection.OpenAsync();
 await using var command = connection.CreateCommand();
@@ -43,7 +53,7 @@ command.CommandText = """
     GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [ListHeroApi];
     GRANT SELECT, INSERT, UPDATE, DELETE ON OBJECT::[cache].[TokenCache] TO [ListHeroCache];
     """;
-command.Parameters.AddWithValue("@apiPassword", apiPassword);
-command.Parameters.AddWithValue("@cachePassword", cachePassword);
+command.Parameters.AddWithValue("@apiPassword", apiPassword!);
+command.Parameters.AddWithValue("@cachePassword", cachePassword!);
 await command.ExecuteNonQueryAsync();
 Console.WriteLine("Database migrations, encrypted-token cache table, and separate runtime users are ready.");

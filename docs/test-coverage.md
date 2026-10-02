@@ -72,7 +72,7 @@ The connection may point to another SQL Server. Test database names must start w
 
 ## CI and remaining verification
 
-`.github/workflows/ci.yml` retains the Linux build/default-test job and adds a Windows job that starts LocalDB, installs headless Chromium, runs every test, enforces coverage, publishes a coverage table to the job summary, and uploads TRX/Cobertura reports. The workflow and gate have been validated locally; hosted Actions results have not been verified in this hosting-preparation run.
+`.github/workflows/ci.yml` runs the Linux build/default-test job and a Windows job that starts LocalDB, installs headless Chromium, runs every test, enforces coverage, publishes a coverage table to the job summary, and uploads TRX/Cobertura reports. `Test-CiCoverage.ps1` accepts identical VSTest attachment copies and rejects conflicting measurements before enforcing the existing thresholds. Both jobs must succeed before the [beta deployment job](ci-cd.md) starts.
 
 The owner reports completing live External ID second-account isolation, actual tenant sign-out, and token renewal checks on October 2, 2026. The automated tests verify the application's behavior around those boundaries, but do not prove ongoing provider availability. Cross-browser/device coverage, performance/load behavior, and Azure/MAUI deployment behavior are separate milestones.
 

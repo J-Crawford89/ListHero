@@ -37,6 +37,8 @@ Microsoft references checked October 2, 2026: [App Service quotas](https://learn
 
 ## Steps
 
+For routine deployments from GitHub, see [CI and beta deployment](ci-cd.md). The steps below provision/reconfigure the environment locally; CI updates the existing apps and applies migrations without replacing their configuration or keys.
+
 Run these from the repository root in PowerShell. Microsoft sign-in uses the regular browser because embedded-browser sign-in has stalled on this computer. Passwords and MFA codes stay on Microsoft's pages.
 
 1. Run `./scripts/Connect-AzureHosting.ps1` and sign in with the subscription owner's account. Use `-UseDeviceCode` only if the normal browser sign-in fails.

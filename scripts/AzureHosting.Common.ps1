@@ -1,3 +1,4 @@
+param([switch]$UseSystemAzureCli)
 $ErrorActionPreference = 'Stop'
 $hostingRoot = Split-Path -Parent $PSScriptRoot
 $hostingCli = Join-Path $hostingRoot '.artifacts/azure-cli/bin/az.cmd'
@@ -5,14 +6,22 @@ $hostingPython = Join-Path $hostingRoot '.artifacts/azure-cli/python.exe'
 $hostingSubscription = '656761a1-f733-44d2-85d9-44cb54a2f96d'
 $hostingTenant = '59a74a72-2c96-4981-9475-6b968a271e4a'
 $hostingGroup = 'rg-listhero-beta'
-$env:AZURE_CONFIG_DIR = Join-Path $hostingRoot '.artifacts/azure-config'
+if ($UseSystemAzureCli) {
+    $hostingSystemCli = (Get-Command az -ErrorAction Stop).Source
+} else {
+    $env:AZURE_CONFIG_DIR = Join-Path $hostingRoot '.artifacts/azure-config'
+}
 
 function Invoke-HostingAzure {
     param([Parameter(Mandatory)][string[]]$Arguments, [switch]$Json)
-    if (!(Test-Path -LiteralPath $hostingPython)) { throw 'The project-local Azure CLI is required.' }
     $format = if ($Json) { 'json' } else { 'none' }
     # Invoke the bundled executable directly; cmd.exe would interpret URL ampersands.
-    $result = & $hostingPython -IBm azure.cli @Arguments --only-show-errors --output $format 2>&1 | Out-String
+    if ($UseSystemAzureCli) {
+        $result = & $hostingSystemCli @Arguments --only-show-errors --output $format 2>&1 | Out-String
+    } else {
+        if (!(Test-Path -LiteralPath $hostingPython)) { throw 'The project-local Azure CLI is required.' }
+        $result = & $hostingPython -IBm azure.cli @Arguments --only-show-errors --output $format 2>&1 | Out-String
+    }
     if ($LASTEXITCODE -ne 0) {
         # Deployment errors can contain settings. Keep credentials out of terminal output.
         throw "Azure operation failed: $($Arguments[0..([Math]::Min(2, $Arguments.Length - 1))] -join ' '). Check subscription permissions, quota, and deployment status in Azure."

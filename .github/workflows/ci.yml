@@ -1,18 +1,27 @@
-name: Build and test
+name: CI and beta deployment
 
 on:
   push:
+    branches: [master]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.x'
       - run: dotnet restore ListHero.slnx
@@ -22,8 +31,10 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.x'
       - name: Start isolated SQL Server LocalDB
@@ -51,14 +62,50 @@ jobs:
         run: dotnet test ListHero.slnx --configuration Release --no-build --no-restore --settings coverage.runsettings --collect:"XPlat Code Coverage" --results-directory .artifacts/ci-coverage --logger "trx;LogFileName=coverage.trx"
       - name: Enforce coverage and require every test to execute
         shell: pwsh
-        run: |
-          $taskCoverage = Get-ChildItem .artifacts/ci-coverage -Recurse -Filter coverage.cobertura.xml
-          if (@($taskCoverage).Count -ne 1) { throw 'Expected one coverage report.' }
-          ./scripts/Test-Coverage.ps1 -CoverageFile $taskCoverage.FullName -TestResultsFile .artifacts/ci-coverage/coverage.trx -RequireAllTests
+        run: ./scripts/Test-CiCoverage.ps1 -ResultsDirectory .artifacts/ci-coverage
       - name: Save test and coverage reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sql-browser-coverage
           path: .artifacts/ci-coverage
           if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 3
+
+  deploy-beta:
+    name: Deploy beta
+    needs: [build, sql-and-browser]
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: beta
+      url: https://listhero-yj3pk6oimchdi.azurewebsites.net/
+    concurrency:
+      group: listhero-beta-deployment
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+      - name: Package the tested commit
+        shell: pwsh
+        run: ./scripts/Publish-CiBeta.ps1
+      - name: Sign in to Azure using GitHub identity
+        uses: Azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Migrate, deploy, and check the existing free beta
+        shell: pwsh
+        env:
+          LISTHERO_DEPLOY_ADMIN_CONNECTION: ${{ secrets.BETA_MIGRATION_CONNECTION }}
+        run: ./scripts/Deploy-CiBeta.ps1

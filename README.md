@@ -151,6 +151,8 @@ Microsoft references:
 
 ## Deployment and future hosts
 
+The [CI/CD pipeline](docs/ci-cd.md) tests pull requests and deploys successful `master` changes to the beta. Full SQL/browser tests and coverage must pass before database migrations and application deployment begin. Deployment uses GitHub OpenID Connect and the protected `beta` environment.
+
 The [free Azure beta](https://listhero-yj3pk6oimchdi.azurewebsites.net/) is deployed in Central US, with verified F1 hosting and Azure SQL free allowance/quota pausing. The owner confirmed hosted sign-in and test list/item creation. See the [environment and deployment guide](docs/free-hosting.md) for scripts, limits, and remaining beta checks. No paid fallback is selected. API keys protect recoverable share tokens; web keys protect login cookies and persisted guest credentials. Losing the hosted key ring can make those existing values unreadable. Multiple instances of the same host must share its key ring and application name.
 
 The MAUI host is deliberately deferred. It will reference UI, Client, Client.Api, and Contracts, provide device storage/authentication adapters, and continue to use the same API. Domain, Application, and Infrastructure belong to the backend.

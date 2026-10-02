@@ -1,5 +1,11 @@
-. (Join-Path $PSScriptRoot 'AzureHosting.Common.ps1')
-$state = Get-Content -LiteralPath (Join-Path $hostingRoot '.artifacts/azure-hosting/deployment-state.json') -Raw | ConvertFrom-Json
+param([string]$WebUrl, [string]$ApiUrl, [switch]$UseSystemAzureCli)
+. (Join-Path $PSScriptRoot 'AzureHosting.Common.ps1') -UseSystemAzureCli:$UseSystemAzureCli
+if (!$WebUrl -and !$ApiUrl) {
+    $state = Get-Content -LiteralPath (Join-Path $hostingRoot '.artifacts/azure-hosting/deployment-state.json') -Raw | ConvertFrom-Json
+} else {
+    if (!$WebUrl -or !$ApiUrl) { throw 'Both hosted URLs are required.' }
+    $state = [pscustomobject]@{ webUrl = @{ value = $WebUrl }; apiUrl = @{ value = $ApiUrl } }
+}
 foreach ($hostName in @('webUrl', 'apiUrl')) {
     $uri = [Uri]$state.$hostName.value
     if ($uri.Scheme -ne 'https' -or $uri.Host -notmatch '^listhero-(api-)?[a-z0-9]+\.azurewebsites\.net$') { throw 'Unexpected beta address.' }

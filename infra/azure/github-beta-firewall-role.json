@@ -1,0 +1,14 @@
+{
+  "Name": "ListHero beta CI SQL firewall",
+  "Description": "Manage runner firewall access for migrations to the existing ListHero beta SQL server",
+  "IsCustom": true,
+  "Actions": [
+    "Microsoft.Sql/servers/firewallRules/read",
+    "Microsoft.Sql/servers/firewallRules/write",
+    "Microsoft.Sql/servers/firewallRules/delete"
+  ],
+  "NotActions": [],
+  "DataActions": [],
+  "NotDataActions": [],
+  "AssignableScopes": ["/subscriptions/656761a1-f733-44d2-85d9-44cb54a2f96d/resourceGroups/rg-listhero-beta"]
+}

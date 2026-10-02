@@ -1,0 +1,7 @@
+{
+  "name": "listhero-github-beta",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:J-Crawford89/ListHero:environment:beta",
+  "description": "GitHub Actions deployments from the protected ListHero beta environment",
+  "audiences": ["api://AzureADTokenExchange"]
+}
