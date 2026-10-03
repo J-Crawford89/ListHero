@@ -47,10 +47,17 @@ jobs:
             $taskLocalDbPath = $taskLocalDb.Source
           }
           if (!$taskLocalDbPath) { throw 'SQL Server LocalDB is required for this job.' }
-          & $taskLocalDbPath start MSSQLLocalDB
-          if ($LASTEXITCODE -ne 0) { throw 'LocalDB did not start.' }
+          $taskInstance = 'ListHeroCI'
+          & $taskLocalDbPath create $taskInstance -s
+          if ($LASTEXITCODE -ne 0) { throw 'The isolated LocalDB instance did not start.' }
+          $taskInstanceInfo = & $taskLocalDbPath info $taskInstance
+          $taskPipeLine = $taskInstanceInfo | Where-Object { $_ -match '^Instance pipe name:\s*(.+)$' }
+          if (!$taskPipeLine -or $taskPipeLine -notmatch '^Instance pipe name:\s*(.+)$') { throw 'LocalDB did not report its running named pipe.' }
+          $taskPipe = 'np:' + $matches[1].Trim()
+          & sqlcmd -S $taskPipe -E -C -l 60 -Q 'SELECT 1 AS Ready;'
+          if ($LASTEXITCODE -ne 0) { throw 'LocalDB failed its readiness query.' }
           $taskDatabase = 'ListHero_Integration_' + [guid]::NewGuid().ToString('N')
-          "LISTHERO_TEST_SQL_CONNECTION=Server=(localdb)\MSSQLLocalDB;Database=$taskDatabase;Trusted_Connection=True;TrustServerCertificate=True" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "LISTHERO_TEST_SQL_CONNECTION=Server=$taskPipe;Database=$taskDatabase;Trusted_Connection=True;TrustServerCertificate=True" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           'LISTHERO_BROWSER_TESTS=1' | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - run: dotnet restore ListHero.slnx
       - run: dotnet build ListHero.slnx --configuration Release --no-restore
@@ -72,6 +79,12 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 3
+      - name: Show isolated SQL startup diagnostics on failure
+        if: failure()
+        shell: pwsh
+        run: |
+          $taskSqlLog = Join-Path $env:LOCALAPPDATA 'Microsoft/Microsoft SQL Server Local DB/Instances/ListHeroCI/error.log'
+          if (Test-Path -LiteralPath $taskSqlLog) { Get-Content -LiteralPath $taskSqlLog -Tail 60 }
 
   deploy-beta:
     name: Deploy beta

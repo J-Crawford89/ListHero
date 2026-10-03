@@ -5,7 +5,7 @@ The workflow is [CI and beta deployment](https://github.com/J-Crawford89/ListHer
 ## What runs
 
 1. Ubuntu builds the .NET 10 solution and runs the ordinary tests.
-2. Windows starts an isolated LocalDB database, installs headless Chromium, runs every test, and enforces the existing line/branch coverage thresholds. No skipped tests are permitted in this job. VSTest's identical coverage attachment copies are accepted; different reports are rejected. Test reports are retained for three days.
+2. Windows creates a fresh `ListHeroCI` LocalDB instance, verifies a readiness query, connects tests directly to its named pipe, installs headless Chromium, runs every test, and enforces the existing line/branch coverage thresholds. No skipped tests are permitted in this job. VSTest's identical coverage attachment copies are accepted; different reports are rejected. Test reports are retained for three days.
 3. Ubuntu publishes self-contained Windows x86 API/web packages from the same commit and a separate migration tool. Large release packages stay on the temporary runner rather than in artifact storage.
 4. The deployment job signs into Azure using GitHub OpenID Connect, verifies the existing F1 plan and SQL free/quota-pause settings, temporarily allows only the runner's IPv4 address into SQL, applies migrations, and deploys the API followed by the web host.
 5. The SQL firewall rule is removed in `finally`, and live homepage, health, anonymous authorization, database-read, and sign-in challenge checks run. A subsequent deployment also removes CI rules left behind by a forcibly terminated runner.
