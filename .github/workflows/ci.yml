@@ -51,9 +51,10 @@ jobs:
           & $taskLocalDbPath create $taskInstance -s
           if ($LASTEXITCODE -ne 0) { throw 'The isolated LocalDB instance did not start.' }
           $taskInstanceInfo = & $taskLocalDbPath info $taskInstance
-          $taskPipeLine = $taskInstanceInfo | Where-Object { $_ -match '^Instance pipe name:\s*(.+)$' }
-          if (!$taskPipeLine -or $taskPipeLine -notmatch '^Instance pipe name:\s*(.+)$') { throw 'LocalDB did not report its running named pipe.' }
-          $taskPipe = 'np:' + $matches[1].Trim()
+          $taskPipeMatch = [regex]::Match(($taskInstanceInfo -join "`n"), '(?m)^Instance pipe name:\s*(.+)$')
+          if (!$taskPipeMatch.Success) { throw 'LocalDB did not report its running named pipe.' }
+          $taskPipe = $taskPipeMatch.Groups[1].Value.Trim()
+          if (!$taskPipe.StartsWith('np:')) { $taskPipe = 'np:' + $taskPipe }
           & sqlcmd -S $taskPipe -E -C -l 60 -Q 'SELECT 1 AS Ready;'
           if ($LASTEXITCODE -ne 0) { throw 'LocalDB failed its readiness query.' }
           $taskDatabase = 'ListHero_Integration_' + [guid]::NewGuid().ToString('N')
