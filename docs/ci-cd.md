@@ -10,7 +10,7 @@ The workflow is [CI and beta deployment](https://github.com/J-Crawford89/ListHer
 4. The deployment job signs into Azure using GitHub OpenID Connect, verifies the existing F1 plan and SQL free/quota-pause settings, temporarily allows only the runner's IPv4 address into SQL, applies migrations, and deploys the API followed by the web host.
 5. The SQL firewall rule is removed in `finally`, and live homepage, health, anonymous authorization, database-read, and sign-in challenge checks run. A subsequent deployment also removes CI rules left behind by a forcibly terminated runner.
 
-Deployment jobs run one at a time and are not automatically canceled by a newer push. Pull requests do not run deployments or receive beta environment secrets. The GitHub `beta` environment permits only the `master` branch, and Azure trusts the subject `repo:J-Crawford89/ListHero:environment:beta`.
+Deployment jobs run one at a time and are not automatically canceled by a newer push. Pull requests do not run deployments or receive beta environment secrets. The GitHub `beta` environment permits only the `master` branch, and Azure trusts the subject `repo:J-Crawford89@60453593/ListHero@1402154601:environment:beta`. The permanent owner/repository IDs follow [GitHub's immutable subject format](https://docs.github.com/en/actions/reference/security/oidc).
 
 ## Identity and configuration
 
