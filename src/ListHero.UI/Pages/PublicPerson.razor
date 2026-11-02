@@ -1,0 +1,40 @@
+@page "/people/{Handle}"
+@inherits ListHero.UI.Components.DiscoveryPageBase
+@using ListHero.UI.Components
+@inject IDiscoveryApi Api
+
+<PageTitle>@(profile?.Author.DisplayName ?? "Public profile") — List Hero</PageTitle>
+<section class="content-page">
+    <a class="back-link" href="/discover?tab=people">← Discover people</a>
+    <p class="eyebrow">THEIR WISHES. YOUR SUPERPOWER.</p>
+    <h1>@(profile?.Author.DisplayName ?? "Public profile")</h1>
+    @if (Error is not null) { <div role="alert">@Error <button @onclick="Reload">Try again</button></div> }
+    @if (IsBusy) { <p role="status">Loading public lists…</p> }
+    else if (profile is not null && Error is null)
+    {
+        <p>@@@profile.Author.Handle · Public wish lists</p>
+        @if (profile.Lists.Items.Count == 0) { <p>No lists on this page.</p> }
+        else { <PublicListCards Lists="profile.Lists.Items" /> }
+        @if (CurrentPage > 1 || profile.Lists.HasMore)
+        {
+            <nav class="discovery-pagination" aria-label="Public list pages">
+                @if (CurrentPage > 1) { <a href="@($"/people/{profile.Author.Handle}?page={CurrentPage - 1}")">← Previous</a> }
+                <span>Page @CurrentPage</span>
+                @if (profile.Lists.HasMore && CurrentPage < 100) { <a href="@($"/people/{profile.Author.Handle}?page={CurrentPage + 1}")">Next →</a> }
+            </nav>
+        }
+    }
+</section>
+@code {
+    [Parameter] public string Handle { get; set; } = "";
+    [Parameter, SupplyParameterFromQuery(Name = "page")] public int? Page { get; set; }
+    private int CurrentPage => Page ?? 1;
+    private PublicProfileResponse? profile;
+    private bool pending;
+    protected override void OnParametersSet() { pending = true; profile = null; }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (pending) { pending = false; await Reload(); }
+    }
+    private Task Reload() => LoadAsync(ct => Api.GetProfileAsync(Handle, CurrentPage, ct), result => profile = result);
+}

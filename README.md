@@ -19,6 +19,7 @@ Implemented:
 - Owner share-link management with stable links, optional UTC expiration, and independent revocation; tokens travel in URL fragments and API headers.
 - Public/private viewer pages, anonymous guest-credential issuance and persistence, idempotent purchase marks, own-mark undo, fulfillment/overpurchase indicators, and purchase-free owner responses.
 - Conditional item-edit warnings and viewer refresh every 20 seconds.
+- Public profiles with chosen names and unique handles; anonymous list/people search and paginated public profile pages. Existing public lists enter discovery after the owner confirms profile setup.
 - Tests for authorization, privacy, purchase ownership, overpurchasing, token handling, persistence metadata, and API startup/security.
 
 The core workflows are implemented. Real customer sign-in and list/item creation have been verified against the List Hero external tenant and LocalDB. Automated tests cover the remaining owner and collaboration operations, including real SQL Server concurrency; an isolated browser check verified anonymous marking through a share link, persistence of guest ownership after reload, and undo. The owner reports completing live second-customer Entra isolation, sign-out, and token renewal checks on October 2, 2026. No database migration runs automatically at startup. See [core workflow guide](docs/core-workflows.md) for usage, verification, and current limits.
@@ -43,7 +44,7 @@ dotnet test ListHero.slnx --no-build --no-restore
 
 Package versions are centralized in `Directory.Packages.props`. NuGet sources are specified in `NuGet.Config`. Compiler warnings are treated as errors.
 
-The suite contains 154 cases. The default run executes 148 and explicitly skips five SQL Server tests and one browser regression. To include the SQL tests, use a fresh database name; scenarios apply migrations to separate database suffixes and retain them for inspection:
+The suite contains 200 cases. The default run executes 192 and explicitly skips seven SQL Server tests and one browser regression. To include the SQL tests, use a fresh database name; scenarios apply migrations to separate database suffixes and retain them for inspection:
 
 ```powershell
 $testDatabase = 'ListHero_Integration_' + [guid]::NewGuid().ToString('N')
@@ -99,7 +100,7 @@ The development default is `(localdb)\MSSQLLocalDB`, database `ListHero`, Window
 
 The EF design-time factory reads `ConnectionStrings__ListHero`; it otherwise uses the LocalDB default. It does not read web/API user secrets. When applying a migration to another server, set that environment variable or use the EF CLI's `--connection` option.
 
-To apply the initial migration to your chosen local database:
+To apply the migrations to your chosen local database:
 
 ```powershell
 dotnet ef database update --project src/ListHero.Infrastructure --startup-project src/ListHero.Api

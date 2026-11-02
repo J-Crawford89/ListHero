@@ -39,7 +39,8 @@
                     <label for="edit-list-name">List name</label><InputText id="edit-list-name" @bind-Value="listDraft.Name" maxlength="200" />
                     <label for="edit-list-description">Description</label><InputTextArea id="edit-list-description" @bind-Value="listDraft.Description" maxlength="4000" />
                     <label><InputCheckbox @bind-Value="listDraft.IsPublic" /> Make this list public</label>
-                    <p>Public lists can be viewed by anyone with the address. Private lists require an active share link.</p>
+                    <p>Anyone can find public lists in search and on your public profile. Private lists require an active share link.</p>
+                    <p>Choose your public name and handle in <a href="/profile">Public profile</a> before making a list public. Existing public lists become searchable when you complete that setup.</p>
                     @if (listDraft.RowVersion != list.RowVersion)
                     {
                         <p class="confirmation">The saved list has changed. Review the saved details, then choose whether to apply your draft over that version.</p>

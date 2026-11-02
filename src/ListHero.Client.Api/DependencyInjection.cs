@@ -21,6 +21,16 @@ public static class DependencyInjection
             http.BaseAddress = baseAddress;
             http.Timeout = TimeSpan.FromSeconds(30);
         });
+        services.AddHttpClient<IDiscoveryApi, DiscoveryApiClient>(http =>
+        {
+            http.BaseAddress = baseAddress;
+            http.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddHttpClient<IPublicProfileApi, PublicProfileApiClient>(http =>
+        {
+            http.BaseAddress = baseAddress;
+            http.Timeout = TimeSpan.FromSeconds(30);
+        });
         services.AddHttpClient<IListCollaborationApi, ListCollaborationApiClient>(http =>
         {
             http.BaseAddress = baseAddress;

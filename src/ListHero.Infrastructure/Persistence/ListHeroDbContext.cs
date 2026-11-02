@@ -26,6 +26,11 @@ public sealed class ListHeroDbContext(DbContextOptions<ListHeroDbContext> option
         user.Property(e => e.IdentityIssuer).HasMaxLength(200).IsRequired();
         user.Property(e => e.IdentitySubject).HasMaxLength(200).IsRequired();
         user.Property(e => e.DisplayName).HasMaxLength(200).IsRequired();
+        user.Property(e => e.PublicDisplayName).HasMaxLength(100);
+        user.Property(e => e.PublicHandle).HasMaxLength(30).IsUnicode(false).UseCollation("Latin1_General_100_BIN2");
+        user.Property(e => e.RowVersion).IsRowVersion();
+        user.Ignore(e => e.HasPublicProfile);
+        user.HasIndex(e => e.PublicHandle).IsUnique().HasFilter("[PublicHandle] IS NOT NULL");
         user.HasIndex(e => new { e.IdentityIssuer, e.IdentitySubject }).IsUnique();
 
         var list = modelBuilder.Entity<WishList>();
@@ -35,6 +40,8 @@ public sealed class ListHeroDbContext(DbContextOptions<ListHeroDbContext> option
         list.Property(e => e.RowVersion).IsRowVersion();
         list.HasOne<User>().WithMany().HasForeignKey(e => e.OwnerId).OnDelete(DeleteBehavior.Restrict);
         list.HasIndex(e => new { e.OwnerId, e.ArchivedAt });
+        list.HasIndex(e => new { e.CreatedAt, e.Id }).IsDescending(true, false)
+            .HasFilter("[IsPublic] = 1 AND [ArchivedAt] IS NULL");
 
         var item = modelBuilder.Entity<WishListItem>();
         item.Property(e => e.Name).HasMaxLength(200).IsRequired();

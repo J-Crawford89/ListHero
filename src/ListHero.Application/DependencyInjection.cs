@@ -2,6 +2,7 @@ using ListHero.Application.Authorization;
 using ListHero.Application.Lists;
 using ListHero.Application.Identity;
 using ListHero.Application.Collaboration;
+using ListHero.Application.Discovery;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ListHero.Application;
@@ -14,6 +15,8 @@ public static class DependencyInjection
         services.AddScoped<IWishListReadService, WishListReadService>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IDiscoveryService, DiscoveryService>();
+        services.AddScoped<IPublicProfileService, PublicProfileService>();
         services.AddScoped<IWishListService, WishListService>();
         services.AddScoped<IListAccessResolver, ListAccessResolver>();
         services.AddScoped<IShareLinkService, ShareLinkService>();

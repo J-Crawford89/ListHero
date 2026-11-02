@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="bunit" />
+    <PackageReference Include="System.Security.Cryptography.Xml" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.Playwright" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

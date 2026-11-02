@@ -1,0 +1,52 @@
+@page "/profile"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inherits ListHero.UI.Components.RequestPageBase
+@using ListHero.UI.Components
+@inject IPublicProfileApi Api
+
+<PageTitle>Public profile — List Hero</PageTitle>
+<section class="content-page">
+    <a class="back-link" href="/lists">← My lists</a>
+    <p class="eyebrow">GIVE YOUR HERO A NAME</p>
+    <h1>Public profile</h1>
+    <RequestFeedback Error="@Error" RequiresSignIn="RequiresSignIn" />
+    @if (notice is not null) { <p role="status" class="confirmation">@notice</p> }
+    <p>Your chosen name and handle appear beside all your public lists. Private lists stay out of discovery.</p>
+    <p>Your profile appears in people search once you have a public list.</p>
+    @if (profile is null)
+    {
+        <p>@(IsBusy ? "Loading your profile…" : "Your profile could not be loaded.")</p>
+        @if (!IsBusy) { <button @onclick="Reload">Try again</button> }
+    }
+    else
+    {
+        <EditForm Model="draft" OnValidSubmit="Save" FormName="public-profile" id="public-profile-form" class="form-card">
+            <DataAnnotationsValidator /><ValidationSummary />
+            <fieldset disabled="@IsBusy">
+                <label for="public-name">Public display name</label><InputText id="public-name" @bind-Value="draft.DisplayName" maxlength="100" />
+                <label for="public-handle">Unique handle</label><InputText id="public-handle" @bind-Value="draft.Handle" maxlength="30" readonly="@(profile.Handle is not null)" aria-describedby="handle-help" />
+                <p id="handle-help">3–30 letters, numbers, underscores or hyphens; start with a letter or number. Your handle cannot be changed after setup.</p>
+                @if (profile.Handle is null)
+                {
+                    <label class="discovery-consent"><InputCheckbox @bind-Value="draft.ConfirmDiscovery" /> I understand that my chosen name, handle and all my public lists will appear in discovery.</label>
+                }
+                <button type="submit" class="button-primary">Save public profile</button>
+                <button type="button" class="button-secondary" @onclick="Reload">Reload saved profile</button>
+            </fieldset>
+        </EditForm>
+        @if (profile.Handle is not null) { <p>Your public address: <a href="@($"/people/{profile.Handle}")">@@@profile.Handle</a>. It becomes visible when you have a public list.</p> }
+    }
+</section>
+@code {
+    private OwnProfileResponse? profile;
+    private UpdatePublicProfileRequest draft = new();
+    private string? notice;
+    protected override async Task OnAfterRenderAsync(bool firstRender) { if (firstRender) await Reload(); }
+    private Task Reload() => RunAsync(async () => Apply(await Api.GetAsync(Cancellation)));
+    private void Apply(OwnProfileResponse value)
+    {
+        profile = value;
+        draft = new() { DisplayName = value.DisplayName ?? value.SuggestedDisplayName, Handle = value.Handle ?? "", RowVersion = value.RowVersion, ConfirmDiscovery = value.Handle is not null };
+    }
+    private Task Save() => RunAsync(async () => { Apply(await Api.UpdateAsync(draft, Cancellation)); notice = "Your public profile is saved."; });
+}

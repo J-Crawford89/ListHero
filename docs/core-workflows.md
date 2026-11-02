@@ -10,6 +10,12 @@ Every edit/archive carries the displayed SQL row version. A stale version receiv
 
 ## Sharing and viewing
 
+Choose **Public profile** to set your public name and unique handle. Confirm that these and all your public lists can appear in discovery. Handles are fixed after setup; your public display name can be edited. A profile appears publicly only while it has at least one public, unarchived list.
+
+Choose **Discover** to browse recent public lists or search list names/descriptions. The People tab searches chosen names and handles; opening a person shows their public lists. Public list results use the ordinary viewer without a share token. Private lists, archived content, purchase information, and identity-provider details are absent from search results.
+
+New private-to-public changes require profile setup. Older public lists still work by direct URL and allow normal maintenance before setup, but enter discovery only after the owner confirms their public identity. Making a list private or archiving it excludes it from subsequent discovery reads; an old result never bypasses list access checks.
+
 Share this list creates independent bearer links with optional UTC expiration. An active, unexpired link is recovered unchanged when the owner reopens the page. Revoke link invalidates that link without rotating others. Expired/revoked links remain listed but their token is no longer delivered. There is no product-level link-count cap.
 
 Private address example: `https://localhost:7016/view/{listId}#{opaqueToken}`. Copy the entire address, including the fragment after `#`. Fragments are not sent in normal HTTP request URLs; the interactive client forwards the token in a dedicated API header. Referrer policy is no-referrer, and list/viewer/API responses use no-store. Do not add request-header/body logging that exposes share keys, guest credentials, authorization headers, or owner link-management responses.
@@ -30,7 +36,7 @@ A mark request has a generated idempotency key. Retries keep that key and quanti
 
 ## Verification
 
-Release builds with zero warnings/errors. The expanded suite contains 154 tests, including five SQL scenarios, hosted-security checks, and a repeatable headless browser journey. Checks cover every owner operation's permission boundaries, token validation, stale edits, archival, link scope/revocation/expiration, scope enforcement, owner privacy, guest/user undo, overpurchase totals, actor/payload-sensitive idempotency, SQL constraints and races, client transport/storage sequencing, draft retention, shared forms, protected browser storage, and sign-out antiforgery. See [coverage and full-suite instructions](test-coverage.md).
+Release builds with zero warnings/errors. The expanded suite contains 200 tests, including seven SQL scenarios, hosted-security checks, and a repeatable headless browser journey. Checks cover every owner operation's permission boundaries, public profiles and discovery, token validation, stale edits, archival, link scope/revocation/expiration, scope enforcement, owner privacy, guest/user undo, overpurchase totals, actor/payload-sensitive idempotency, SQL constraints and races, client transport/storage sequencing, draft retention, shared forms, protected browser storage, and sign-out antiforgery. See [coverage and full-suite instructions](test-coverage.md).
 
 An isolated browser test used ports 7336/7443 and a separate `ListHero_Integration_*_Core` database. It verified anonymous marking, a quantity of two, fulfillment/excess totals, guest ownership after reload, and undo. Browser input used normal keyboard events to commit number-field changes. The normal development user's saved list and item were not changed.
 

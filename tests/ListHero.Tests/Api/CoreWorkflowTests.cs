@@ -21,6 +21,7 @@ public sealed partial class OwnerWorkflowTests
         using var owner = SignedInClient(factory);
         using var other = SignedInClient(factory);
         var list = await CreateListAsync(owner);
+        await SetProfileAsync(owner);
         var update = new UpdateWishListRequest { Name = "Updated", Description = "New description", IsPublic = true, RowVersion = list.RowVersion };
         var updated = await JsonAsync<OwnerWishListResponse>(await owner.PutAsJsonAsync($"/api/lists/{list.Id}", update));
         Assert.True(updated.IsPublic);
@@ -61,6 +62,7 @@ public sealed partial class OwnerWorkflowTests
         using var anonymous = factory.CreateClient(new() { BaseAddress = new("https://localhost") });
         var list = await CreateListAsync(owner);
         Assert.Equal(HttpStatusCode.NotFound, (await outsider.GetAsync($"/api/lists/{list.Id}/view")).StatusCode);
+        await SetProfileAsync(owner);
         list = await JsonAsync<OwnerWishListResponse>(await owner.PutAsJsonAsync($"/api/lists/{list.Id}", new UpdateWishListRequest
             { Name = list.Name, IsPublic = true, RowVersion = list.RowVersion }));
         var item = list.Items[0];
@@ -121,6 +123,7 @@ public sealed partial class OwnerWorkflowTests
         using var owner = SignedInClient(factory);
         using var buyer = SignedInClient(factory);
         var list = await CreateListAsync(owner);
+        await SetProfileAsync(owner);
         var update = new UpdateWishListRequest { Name = "Concurrent", IsPublic = true, RowVersion = list.RowVersion };
         var edits = await Task.WhenAll(owner.PutAsJsonAsync($"/api/lists/{list.Id}", update), owner.PutAsJsonAsync($"/api/lists/{list.Id}", update));
         Assert.Single(edits, response => response.StatusCode == HttpStatusCode.OK);
@@ -163,6 +166,7 @@ public sealed partial class OwnerWorkflowTests
         var undo = new ArchiveRequest { RowVersion = mark.RowVersion };
         await owner.PostAsync(path + $"/share-links/{link.Id}/revoke", null);
         Assert.Equal(HttpStatusCode.NotFound, (await guest.PostAsJsonAsync(path + $"/items/{item.Id}/marks/{mark.Id}/undo", undo)).StatusCode);
+        await SetProfileAsync(owner);
         list = await JsonAsync<OwnerWishListResponse>(await owner.PutAsJsonAsync(path, new UpdateWishListRequest { Name = list.Name, IsPublic = true, RowVersion = list.RowVersion }));
         Assert.Equal(HttpStatusCode.Forbidden, (await guest.PostAsJsonAsync(path + $"/items/{item.Id}/marks/{mark.Id}/undo", undo)).StatusCode);
         signedInGuest.DefaultRequestHeaders.Add(CapabilityHeaders.Guest, credential.Credential);

@@ -41,6 +41,12 @@ public sealed class WishListApiClient(HttpClient http, IApiAccessTokenProvider t
         if (response.StatusCode == HttpStatusCode.Unauthorized) throw new SignInRequiredException();
         if (response.StatusCode == HttpStatusCode.Conflict) throw new ApiConflictException();
         if (response.StatusCode == HttpStatusCode.NoContent) return default!;
+        if (response.StatusCode == HttpStatusCode.BadRequest && response.Content.Headers.ContentType?.MediaType == "application/problem+json")
+        {
+            var problem = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(cancellationToken);
+            if (problem.TryGetProperty("code", out var code) && code.GetString() == "profile_required")
+                throw new ApiRequestException("Set up your public profile before making this list public. Use the Public profile link to choose your name and handle.");
+        }
         if (!response.IsSuccessStatusCode)
             throw new ApiRequestException(response.StatusCode switch
             {

@@ -51,8 +51,11 @@ public sealed class WishListService(IUserService users, IWishListStore store,
     }
     public async Task<OwnerWishListResponse> UpdateAsync(ExternalUserIdentity identity, Guid listId, UpdateWishListRequest request, CancellationToken cancellationToken = default)
     {
-        var list = await RequireOwnerAsync(identity, listId, cancellationToken);
+        var user = await users.ResolveAsync(identity, cancellationToken);
+        var list = await store.GetOwnedAsync(listId, user.Id, cancellationToken) ?? throw new ResourceNotFoundException();
         var version = RequireVersion(list.RowVersion, request.RowVersion);
+        if (request.IsPublic && !list.IsPublic && !user.HasPublicProfile)
+            throw new Discovery.PublicProfileRequiredException();
         list.Update(request.Name, request.Description, request.IsPublic);
         await store.SaveListAsync(list, version, cancellationToken);
         return await GetOwnerViewAsync(identity, listId, cancellationToken);

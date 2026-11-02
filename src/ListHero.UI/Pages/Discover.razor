@@ -1,0 +1,77 @@
+@page "/discover"
+@inherits ListHero.UI.Components.DiscoveryPageBase
+@using ListHero.UI.Components
+@inject IDiscoveryApi Api
+@inject NavigationManager Navigation
+
+<PageTitle>Discover — List Hero</PageTitle>
+<section class="content-page discovery-page">
+    <p class="eyebrow">FIND YOUR EVERYDAY HEROES</p>
+    <h1>Discover</h1>
+    <p>Find public wish lists and the people who make them.</p>
+    <nav class="discovery-tabs" aria-label="Search type">
+        <a href="@Link("lists", 1)" aria-current="@(People ? null : "page")">Lists</a>
+        <a href="@Link("people", 1)" aria-current="@(People ? "page" : null)">People</a>
+    </nav>
+    <form @onsubmit="Search" @onsubmit:preventDefault class="discovery-search" aria-label="Search discovery">
+        <label for="discovery-query">@(People ? "Name or @handle" : "List name or description")</label>
+        <input id="discovery-query" @bind="draft" maxlength="100" type="search" />
+        <button type="submit" class="button-primary">Search</button>
+    </form>
+    @if (Error is not null) { <div role="alert" class="request-error">@Error <button @onclick="Reload">Try again</button></div> }
+    @if (IsBusy) { <p role="status">Searching…</p> }
+    else if (Error is null && loaded)
+    {
+        @if (People)
+        {
+            @if (string.IsNullOrWhiteSpace(Query)) { <p>Search for a name or @("@handle") to find someone's public lists.</p> }
+            else if (people!.Items.Count == 0) { <p>No people found. Try a different name or handle.</p> }
+            else
+            {
+                <div class="list-cards">
+                    @foreach (var person in people!.Items)
+                    {
+                        <a class="list-card person-card" href="@($"/people/{person.Handle}")" @key="person.Handle"><h2>@person.DisplayName</h2><p>@@@person.Handle</p><span>View public lists →</span></a>
+                    }
+                </div>
+            }
+        }
+        else if (lists!.Items.Count == 0) { <p>No public lists found. Try another search, or come back soon.</p> }
+        else { <PublicListCards Lists="lists!.Items" /> }
+        @if (CurrentPage > 1 || HasMore)
+        {
+            <nav class="discovery-pagination" aria-label="Results pages">
+                @if (CurrentPage > 1) { <a href="@Link(People ? "people" : "lists", CurrentPage - 1)">← Previous</a> }
+                <span>Page @CurrentPage</span>
+                @if (HasMore && CurrentPage < 100) { <a href="@Link(People ? "people" : "lists", CurrentPage + 1)">Next →</a> }
+            </nav>
+        }
+    }
+</section>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "q")] public string? Query { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "tab")] public string? Tab { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "page")] public int? Page { get; set; }
+    private int CurrentPage => Page ?? 1;
+    private string draft = "";
+    private bool pending, loaded;
+    private DiscoveryPage<PublicListSummary>? lists;
+    private DiscoveryPage<PublicPersonSummary>? people;
+    private bool People => Tab == "people";
+    private bool HasMore => People ? people?.HasMore == true : lists?.HasMore == true;
+    protected override void OnParametersSet() { draft = Query ?? ""; pending = true; loaded = false; }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (pending) { pending = false; await Reload(); }
+    }
+    private async Task Reload()
+    {
+        loaded = false;
+        var query = new DiscoveryQuery(Query, CurrentPage);
+        if (People) await LoadAsync(ct => Api.GetPeopleAsync(query, ct), result => { people = result; loaded = true; });
+        else await LoadAsync(ct => Api.GetListsAsync(query, ct), result => { lists = result; loaded = true; });
+    }
+    private string Link(string tab, int page) => $"/discover?tab={tab}&q={Uri.EscapeDataString(Query ?? "")}&page={page}";
+    private void Search() => Navigation.NavigateTo($"/discover?tab={(People ? "people" : "lists")}&q={Uri.EscapeDataString(draft.Trim())}&page=1");
+}

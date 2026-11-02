@@ -100,6 +100,8 @@ public sealed partial class WebHostTests
                     services.AddScoped<IApiAccessTokenProvider, BrowserTokens>();
                     services.AddHttpClient<IWishListApi, WishListApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
                     services.AddHttpClient<IListCollaborationApi, ListCollaborationApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
+                    services.AddHttpClient<IDiscoveryApi, DiscoveryApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
+                    services.AddHttpClient<IPublicProfileApi, PublicProfileApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
                 }
                 services.PostConfigure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
                 {

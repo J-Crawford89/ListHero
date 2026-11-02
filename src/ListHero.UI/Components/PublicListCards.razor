@@ -1,0 +1,14 @@
+<div class="list-cards">
+    @foreach (var list in Lists)
+    {
+        <article class="list-card public-list-card" @key="list.Id">
+            <span class="private-badge">Public</span>
+            <h2><a href="@($"/view/{list.Id}")">@list.Name</a></h2>
+            <p>@list.Description</p>
+            <a href="@($"/people/{list.Author.Handle}")">@list.Author.DisplayName <span>@@@list.Author.Handle</span></a>
+        </article>
+    }
+</div>
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<PublicListSummary> Lists { get; set; } = [];
+}

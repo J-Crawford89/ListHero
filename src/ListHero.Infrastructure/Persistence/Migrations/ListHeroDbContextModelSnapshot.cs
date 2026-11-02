@@ -166,7 +166,27 @@ namespace ListHero.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("PublicDisplayName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PublicHandle")
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .UseCollation("Latin1_General_100_BIN2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("PublicHandle")
+                        .IsUnique()
+                        .HasFilter("[PublicHandle] IS NOT NULL");
 
                     b.HasIndex("IdentityIssuer", "IdentitySubject")
                         .IsUnique();
@@ -210,6 +230,10 @@ namespace ListHero.Infrastructure.Persistence.Migrations
                         .HasColumnType("rowversion");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt", "Id")
+                        .IsDescending(true, false)
+                        .HasFilter("[IsPublic] = 1 AND [ArchivedAt] IS NULL");
 
                     b.HasIndex("OwnerId", "ArchivedAt");
 

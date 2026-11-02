@@ -35,7 +35,7 @@ The owner workflow uses `IWishListApi` in Client, `WishListApiClient` in Client.
 - Anyone may create an account through Entra External ID; an account is required to create/manage lists.
 - Lists default to private. Owners can manage their lists without a link.
 - A private list requires ownership or a valid bearer share link to view.
-- Public lists allow anonymous viewing. Public discovery/search is deferred.
+- Public lists allow anonymous viewing. Discovery lists public, unarchived content from active owners who have confirmed a public name and unique handle. See [public discovery](public-discovery-plan.md).
 - Nonowners can mark purchases if authenticated and viewing a public list, or if they possess a valid share link for that list.
 - An authenticated nonowner without a share link cannot access a private list.
 - Authenticated owner identity takes precedence over a share link. The owner sees the owner view and cannot mark purchases in v1.
@@ -105,6 +105,6 @@ The free Azure beta was deployed in Central US on October 2, 2026. F1 hosting an
 2. Owner edits, archive actions, visibility changes, row-version concurrency handling, and conditional edit warnings: implemented and tested.
 3. Share-link management and private/public viewer routes, credential validation, no-store responses, and token-safe transport: implemented and tested.
 4. Guest credentials, idempotent purchase creation/undo, fulfillment UI, and periodic viewer refresh: implemented and tested, including a real browser guest workflow.
-5. Next: test hosted collaboration/sign-out/renewal with a small beta group and review UI/UX with the owner's designer. See [free hosting](free-hosting.md). Public discovery, uploads, admin operations, owner reveal/reset, and MAUI startup remain future features.
+5. Next: test hosted collaboration/sign-out/renewal with a small beta group and review UI/UX with the owner's designer. See [free hosting](free-hosting.md). Public discovery and profiles are implemented. Uploads, admin operations, owner reveal/reset, and MAUI startup remain future features.
 
-The initial migration has been applied to local development SQL Server and the separate Azure beta database; the core workflows require no additional migration. The suite contains 154 cases with five SQL scenarios, a repeatable browser regression, Web/hosted-security integration, and per-assembly CI coverage requirements. See [test coverage](test-coverage.md).
+The public-discovery migration adds nullable public profile fields, a user row version, and discovery indexes without changing existing list visibility. Apply it before running the updated hosts. The suite contains 200 cases with seven SQL scenarios, a repeatable browser regression, Web/hosted-security integration, and per-assembly CI coverage requirements. See [test coverage](test-coverage.md).

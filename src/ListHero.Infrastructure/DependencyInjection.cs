@@ -2,6 +2,7 @@ using ListHero.Application.Security;
 using ListHero.Application.Identity;
 using ListHero.Application.Lists;
 using ListHero.Application.Collaboration;
+using ListHero.Application.Discovery;
 using ListHero.Infrastructure.Persistence;
 using ListHero.Infrastructure.Security;
 using Microsoft.AspNetCore.DataProtection;
@@ -21,6 +22,8 @@ public static class DependencyInjection
         services.AddDataProtection().SetApplicationName("ListHero.Api");
         services.AddSingleton<ICapabilityTokenService, CapabilityTokenService>();
         services.AddScoped<IUserStore, EfUserStore>();
+        services.AddScoped<IDiscoveryStore, EfDiscoveryStore>();
+        services.AddScoped<IPublicProfileStore, EfPublicProfileStore>();
         services.AddScoped<IWishListStore, EfWishListStore>();
         services.AddScoped<EfCollaborationStore>();
         services.AddScoped<IListViewerStore>(provider => provider.GetRequiredService<EfCollaborationStore>());

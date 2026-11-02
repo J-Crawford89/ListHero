@@ -77,6 +77,7 @@ public sealed partial class OwnerWorkflowTests
         using var owner = SignedInClient(factory);
         using var buyer = SignedInClient(factory);
         var list = await CreateListAsync(owner);
+        await SetProfileAsync(owner);
         await owner.PutAsJsonAsync($"/api/lists/{list.Id}", new UpdateWishListRequest { Name = list.Name, IsPublic = true, RowVersion = list.RowVersion });
         var item = list.Items[0];
         var mark = await JsonAsync<OwnPurchaseMarkResponse>(await buyer.PostAsJsonAsync($"/api/lists/{list.Id}/items/{item.Id}/marks", new CreatePurchaseMarkRequest { IdempotencyKey = Guid.NewGuid() }));
@@ -101,6 +102,7 @@ public sealed partial class OwnerWorkflowTests
         using var buyer = SignedInClient(factory);
         using var another = SignedInClient(factory);
         var list = await CreateListAsync(owner);
+        await SetProfileAsync(owner);
         await owner.PutAsJsonAsync($"/api/lists/{list.Id}", new UpdateWishListRequest { Name = list.Name, IsPublic = true, RowVersion = list.RowVersion });
         var key = Guid.NewGuid();
         var route = $"/api/lists/{list.Id}/items/{list.Items[0].Id}/marks";

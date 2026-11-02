@@ -124,6 +124,7 @@ public sealed partial class OwnerWorkflowTests
         using var buyer = SignedInClient(factory);
         var first = await CreateListAsync(owner);
         var second = await CreateListAsync(owner);
+        await SetProfileAsync(owner);
         foreach (var list in new[] { first, second })
             await owner.PutAsJsonAsync($"/api/lists/{list.Id}", new UpdateWishListRequest { Name = list.Name, IsPublic = true, RowVersion = list.RowVersion });
         var foreign = second.Items[0];

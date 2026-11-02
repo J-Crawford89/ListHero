@@ -91,7 +91,9 @@ app.UseAntiforgery();
 app.Use(async (context, next) =>
 {
     context.Response.Headers["Referrer-Policy"] = "no-referrer";
-    if (context.Request.Path.StartsWithSegments("/lists") || context.Request.Path.StartsWithSegments("/view"))
+    if (context.Request.Path.StartsWithSegments("/lists") || context.Request.Path.StartsWithSegments("/view")
+        || context.Request.Path.StartsWithSegments("/discover") || context.Request.Path.StartsWithSegments("/people")
+        || context.Request.Path.StartsWithSegments("/profile"))
         context.Response.Headers.CacheControl = "no-store";
     await next(context);
 });

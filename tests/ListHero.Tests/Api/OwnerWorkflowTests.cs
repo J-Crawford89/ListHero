@@ -197,6 +197,7 @@ public sealed partial class OwnerWorkflowTests
                     services.RemoveAll<IWishListStore>();
                     services.AddSingleton<MemoryUserStore>();
                     services.AddSingleton<IUserStore>(provider => provider.GetRequiredService<MemoryUserStore>());
+                    services.AddSingleton<ListHero.Application.Discovery.IPublicProfileStore, MemoryProfileStore>();
                     services.AddSingleton<MemoryListStore>();
                     services.AddSingleton<IWishListStore>(provider => provider.GetRequiredService<MemoryListStore>());
                     services.RemoveAll<IListViewerStore>();
@@ -235,7 +236,23 @@ public sealed partial class OwnerWorkflowTests
     {
         public ConcurrentDictionary<(string, string), User> Users { get; } = new();
         public Task<User> GetOrCreateAsync(ExternalUserIdentity identity, DateTimeOffset now, CancellationToken cancellationToken = default)
-            => Task.FromResult(Users.GetOrAdd((identity.Issuer, identity.ObjectId), _ => new(identity.Issuer, identity.ObjectId, identity.DisplayName, now)));
+            => Task.FromResult(Users.GetOrAdd((identity.Issuer, identity.ObjectId), _ =>
+            {
+                var user = new User(identity.Issuer, identity.ObjectId, identity.DisplayName, now);
+                StampVersion(user);
+                return user;
+            }));
+    }
+
+    private sealed class MemoryProfileStore(MemoryUserStore users) : ListHero.Application.Discovery.IPublicProfileStore
+    {
+        public Task SaveAsync(User user, byte[] expectedVersion, CancellationToken ct)
+        {
+            if (users.Users.Values.Any(other => other.Id != user.Id && other.PublicHandle == user.PublicHandle))
+                throw new ListHero.Application.Discovery.HandleUnavailableException();
+            StampVersion(user);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class MemoryListStore : IWishListStore
