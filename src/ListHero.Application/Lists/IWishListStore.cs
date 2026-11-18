@@ -1,10 +1,12 @@
 using ListHero.Domain.Entities;
+using ListHero.Contracts.Lists;
 
 namespace ListHero.Application.Lists;
 
 public interface IWishListStore
 {
     Task<IReadOnlyList<WishList>> GetByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<WishListSummaryResponse>> GetOwnerPreviewAsync(Guid ownerId, CancellationToken cancellationToken = default);
     Task<WishList?> GetOwnedAsync(Guid listId, Guid ownerId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<WishListItem>> GetItemsAsync(Guid listId, CancellationToken cancellationToken = default);
     Task AddListAsync(WishList list, CancellationToken cancellationToken = default);

@@ -1,13 +1,15 @@
 @page "/view/{ListId:guid}"
 @inherits ListHero.UI.Components.RequestPageBase
+@implements IAsyncDisposable
 @using ListHero.UI.Components
 @using System.Globalization
 @using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.JSInterop
 @inject IListViewerClient Viewer
 @inject AuthenticationStateProvider Authentication
 @inject NavigationManager Navigation
 @inject IHostPresentation Host
-@inject TimeProvider Clock
+@inject IJSRuntime JS
 
 <PageTitle>@(list?.Name ?? "Wish list") — List Hero</PageTitle>
 <section class="content-page">
@@ -26,6 +28,7 @@
         @if (signedIn) { <SaveListButton ListId="ListId" ShareToken="shareToken" /> }
         <p>Marks help everyone coordinate gifts. They don't confirm an actual purchase.</p>
         <button class="button-secondary" disabled="@IsBusy" @onclick="LoadAsync">Refresh list</button>
+        @if (pollingUnavailable) { <p>Automatic updates are unavailable. Use Refresh list to check for changes.</p> }
         @if (!list.CanMarkPurchases)
         {
             <p>You can view this list. Sign in or use an active share link to mark gifts.</p>
@@ -76,6 +79,9 @@
     private string? shareToken, notice, requestedLocation;
     private Guid requestedListId;
     private bool signedIn, needsLoad;
+    private bool pollingUnavailable;
+    private IJSObjectReference? pollingModule, polling;
+    private DotNetObjectReference<ViewerList>? pollingReference;
     private readonly Dictionary<Guid, MarkDraft> drafts = new();
     protected override void OnInitialized() => Navigation.LocationChanged += LocationChanged;
     protected override void OnParametersSet() => QueueLoad();
@@ -91,7 +97,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (needsLoad && !IsBusy) { needsLoad = false; await LoadAsync(); }
-        if (firstRender) _ = PollAsync();
+        if (firstRender) await StartPollingAsync();
     }
     private Task LoadAsync() => RunAsync(LoadCoreAsync);
     private async Task LoadCoreAsync()
@@ -135,17 +141,52 @@
         notice = "Your mark was undone.";
         await LoadCoreAsync();
     });
-    private async Task PollAsync()
+    private async Task StartPollingAsync()
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(20), Clock);
         try
         {
-            while (await timer.WaitForNextTickAsync(Cancellation))
-                await InvokeAsync(async () => { if (list is not null && !IsBusy && Error is null) await LoadAsync(); });
+            var module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ListHero.UI/Pages/ViewerList.razor.js");
+            if (IsDisposed) { await module.DisposeAsync(); return; }
+            pollingModule = module;
+            pollingReference = DotNetObjectReference.Create(this);
+            var subscription = await module.InvokeAsync<IJSObjectReference>("watch", pollingReference);
+            if (IsDisposed) await StopPollingAsync(subscription);
+            else polling = subscription;
         }
-        catch (OperationCanceledException) { }
+        catch (JSException)
+        {
+            if (!IsDisposed) { pollingUnavailable = true; StateHasChanged(); }
+        }
+        catch (OperationCanceledException) when (IsDisposed) { }
     }
-    public override void Dispose() { Navigation.LocationChanged -= LocationChanged; base.Dispose(); }
+    [JSInvokable]
+    public Task RefreshViewer() => InvokeAsync(async () =>
+    {
+        if (!IsDisposed && list is not null && !IsBusy && Error is null) await LoadAsync();
+    });
+    public override void Dispose()
+    {
+        Navigation.LocationChanged -= LocationChanged;
+        base.Dispose();
+        pollingReference?.Dispose();
+        pollingReference = null;
+    }
+    public async ValueTask DisposeAsync()
+    {
+        Dispose();
+        if (polling is not null) { await StopPollingAsync(polling); polling = null; }
+        if (pollingModule is not null)
+        {
+            try { await pollingModule.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+            pollingModule = null;
+        }
+    }
+    private static async Task StopPollingAsync(IJSObjectReference subscription)
+    {
+        try { await subscription.InvokeVoidAsync("dispose"); await subscription.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+    }
     private sealed class MarkDraft
     {
         public CreatePurchaseMarkRequest Request { get; } = new() { IdempotencyKey = Guid.NewGuid() };

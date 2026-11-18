@@ -24,10 +24,10 @@ public sealed class DashboardService(IUserService users, IWishListStore lists, I
     public async Task<DashboardResponse> GetAsync(ExternalUserIdentity identity, CancellationToken ct = default)
     {
         var user = await users.ResolveAsync(identity, ct);
-        var owned = await lists.GetByOwnerAsync(user.Id, ct);
+        var owned = await lists.GetOwnerPreviewAsync(user.Id, ct);
         var pins = await saved.GetAsync(user.Id, 1, true, clock.GetUtcNow(), ct);
         var entries = await saved.GetAsync(user.Id, 1, false, clock.GetUtcNow(), ct);
-        return new(pins.Items, owned.Take(5).Select(l => new WishListSummaryResponse(l.Id, l.Name, l.Description, l.IsPublic, l.CreatedAt)).ToArray(), entries.Items.Take(5).ToArray());
+        return new(pins.Items, owned, entries.Items.Take(5).ToArray());
     }
     public async Task<SavedListPage> SavedAsync(ExternalUserIdentity identity, int page, CancellationToken ct = default)
     {
@@ -39,7 +39,11 @@ public sealed class DashboardService(IUserService users, IWishListStore lists, I
     {
         var user = await users.ResolveAsync(request.User ?? throw new UnauthorizedAccessException(), ct);
         var resolved = await access.ResolveAsync(listId, request, ct);
-        await saved.SaveAsync(user.Id, listId, resolved.Share?.Id, pinned, clock.GetUtcNow(), ct);
+        var now = clock.GetUtcNow();
+        // A pin-only action must not write back a grant read before a concurrent access update.
+        var shareId = request.ShareToken is not null && resolved.Share is { } share
+            && share.WishListId == listId && share.IsActive(now) ? share.Id : (Guid?)null;
+        await saved.SaveAsync(user.Id, listId, shareId, pinned, now, ct);
     }
     public async Task RemoveAsync(ExternalUserIdentity identity, Guid listId, CancellationToken ct = default)
         => await saved.RemoveAsync((await users.ResolveAsync(identity, ct)).Id, listId, clock.GetUtcNow(), ct);

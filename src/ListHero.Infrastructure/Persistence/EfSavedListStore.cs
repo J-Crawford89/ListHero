@@ -1,4 +1,5 @@
 using ListHero.Application.Lists;
+using ListHero.Application.Common;
 using ListHero.Contracts.Lists;
 using ListHero.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -15,13 +16,24 @@ public sealed class EfSavedListStore(ListHeroDbContext db) : ISavedListStore
             select link).SingleOrDefaultAsync(ct);
     public async Task SaveAsync(Guid userId, Guid listId, Guid? shareId, bool? pinned, DateTimeOffset now, CancellationToken ct)
     {
-        var entry = await db.SavedLists.SingleOrDefaultAsync(e => e.UserId == userId && e.WishListId == listId && e.ArchivedAt == null, ct);
-        if (entry is not null) { entry.Update(shareId ?? entry.ShareLinkId, pinned ?? entry.IsPinned); await db.SaveChangesAsync(ct); return; }
-        entry = new(userId, listId, shareId, pinned ?? false, now); db.SavedLists.Add(entry);
+        if (await UpdateExistingAsync(userId, listId, shareId, pinned, ct)) return;
+
+        var entry = new SavedList(userId, listId, shareId, pinned ?? false, now);
+        db.SavedLists.Add(entry);
         try { await db.SaveChangesAsync(ct); }
-        catch (DbUpdateException e) when (e.InnerException is SqlException { Number: 2601 or 2627 })
-        { db.Entry(entry).State = EntityState.Detached; await SaveAsync(userId, listId, shareId, pinned, now, ct); }
+        catch (DbUpdateException exception) when (exception.InnerException is SqlException { Number: 2601 or 2627 })
+        {
+            db.Entry(entry).State = EntityState.Detached;
+            // Another request inserted first. Merge once into that active shortcut; never recurse.
+            if (!await UpdateExistingAsync(userId, listId, shareId, pinned, ct)) throw new EditConflictException();
+        }
     }
+
+    private async Task<bool> UpdateExistingAsync(Guid userId, Guid listId, Guid? shareId, bool? pinned, CancellationToken ct)
+        => await db.SavedLists.Where(entry => entry.UserId == userId && entry.WishListId == listId && entry.ArchivedAt == null)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(entry => entry.ShareLinkId, entry => shareId ?? entry.ShareLinkId)
+                .SetProperty(entry => entry.IsPinned, entry => pinned ?? entry.IsPinned), ct) != 0;
     public async Task RemoveAsync(Guid userId, Guid listId, DateTimeOffset now, CancellationToken ct)
         => _ = await db.SavedLists.Where(e => e.UserId == userId && e.WishListId == listId && e.ArchivedAt == null)
             .ExecuteUpdateAsync(update => update.SetProperty(e => e.ArchivedAt, now), ct);

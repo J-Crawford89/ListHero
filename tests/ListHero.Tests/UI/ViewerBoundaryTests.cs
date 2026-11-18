@@ -56,24 +56,24 @@ public sealed partial class ViewerPageTests
     }
 
     [Fact]
-    public void Polling_refreshes_other_buyers_marks_removes_actions_after_revocation_and_stops_on_disposal()
+    public async Task Polling_refreshes_other_buyers_marks_removes_actions_after_revocation_and_stops_on_disposal()
     {
-        using var context = ViewerContext(out var fake, out var clock);
+        using var context = ViewerContext(out var fake, out var polling);
         var page = context.Render<ViewerList>(p => p.Add(c => c.ListId, fake.ListId));
         page.WaitForAssertion(() => Assert.Single(page.FindAll(".mark-form")));
         fake.mark = new(Guid.NewGuid(), fake.ItemId, 4, DateTimeOffset.UtcNow, null, "AQAAAAAAAAA=");
-        clock.Tick();
+        await polling.RefreshAsync();
         page.WaitForAssertion(() => Assert.Contains("Fulfilled", page.Markup));
         Assert.Single(page.FindAll(".own-mark button"));
         fake.CanMark = false;
-        clock.Tick();
+        await polling.RefreshAsync();
         page.WaitForAssertion(() => Assert.Empty(page.FindAll(".mark-form")));
         Assert.Single(page.FindAll(".own-mark"));
         Assert.Empty(page.FindAll(".own-mark button"));
-        page.Instance.Dispose();
-        page.WaitForAssertion(() => Assert.True(clock.TimerDisposed));
+        await page.Instance.DisposeAsync();
+        Assert.True(polling.Stopped);
         var calls = fake.Loads;
-        clock.Tick();
+        await polling.RefreshAsync();
         Assert.Equal(calls, fake.Loads);
     }
 
@@ -110,30 +110,14 @@ public sealed partial class ViewerPageTests
         Assert.True((await started.Task).IsCancellationRequested);
     }
 
-    private static BunitContext ViewerContext(out FakeViewer fake, out ManualClock clock)
+    private static BunitContext ViewerContext(out FakeViewer fake, out TestPolling polling)
     {
         var context = new BunitContext();
         context.AddAuthorization().SetNotAuthorized();
-        fake = new(); clock = new();
+        fake = new(); polling = new();
         context.Services.AddSingleton<IListViewerClient>(fake);
         context.Services.AddSingleton<IHostPresentation>(new FakeHost());
-        context.Services.AddSingleton<TimeProvider>(clock);
+        context.Services.AddSingleton<Microsoft.JSInterop.IJSRuntime>(polling);
         return context;
-    }
-    private sealed class ManualClock : TimeProvider
-    {
-        private ManualTimer? timer;
-        public bool TimerDisposed => timer?.Disposed == true;
-        public void Tick() => timer?.Tick();
-        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
-            => timer = new(callback, state);
-        private sealed class ManualTimer(TimerCallback callback, object? state) : ITimer
-        {
-            public bool Disposed { get; private set; }
-            public bool Change(TimeSpan dueTime, TimeSpan period) => !Disposed;
-            public void Tick() { if (!Disposed) callback(state); }
-            public void Dispose() => Disposed = true;
-            public ValueTask DisposeAsync() { Dispose(); return ValueTask.CompletedTask; }
-        }
     }
 }

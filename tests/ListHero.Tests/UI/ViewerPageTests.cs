@@ -14,7 +14,7 @@ public sealed partial class ViewerPageTests
     public void Anonymous_mark_retry_keeps_the_same_key_and_quantity_then_can_be_undone()
     {
         using var context = new BunitContext();
-        context.Services.AddSingleton(TimeProvider.System);
+        context.Services.AddSingleton<Microsoft.JSInterop.IJSRuntime>(new TestPolling());
         context.AddAuthorization().SetNotAuthorized();
         var fake = new FakeViewer { FailOnce = true };
         context.Services.AddSingleton<IListViewerClient>(fake);
@@ -43,7 +43,7 @@ public sealed partial class ViewerPageTests
     public void Public_anonymous_view_does_not_render_purchase_actions()
     {
         using var context = new BunitContext();
-        context.Services.AddSingleton(TimeProvider.System);
+        context.Services.AddSingleton<Microsoft.JSInterop.IJSRuntime>(new TestPolling());
         context.AddAuthorization().SetNotAuthorized();
         var fake = new FakeViewer { CanMark = false };
         context.Services.AddSingleton<IListViewerClient>(fake);

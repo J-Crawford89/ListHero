@@ -34,6 +34,7 @@ public sealed partial class WebHostTests
         var origin = hostClient.BaseAddress!.ToString().TrimEnd('/');
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+        await VerifyViewerPollingAsync(browser, origin);
         await using var owner = await browser.NewContextAsync(new() { IgnoreHTTPSErrors = true });
         await using var guest = await browser.NewContextAsync(new() { IgnoreHTTPSErrors = true });
         var page = await owner.NewPageAsync();
@@ -84,6 +85,7 @@ public sealed partial class WebHostTests
         }
         await guestPage.GotoAsync(shareAddress);
         await Expect(guestPage.Locator(".mark-form")).ToHaveCountAsync(1);
+        await Expect(guestPage.GetByText("Automatic updates are unavailable.", new() { Exact = false })).ToHaveCountAsync(0);
         await guestPage.Locator(".mark-form input[type=number]").FillAsync("3");
         await guestPage.Locator(".mark-form input[type=number]").PressAsync("Tab");
         await guestPage.GetByRole(AriaRole.Button, new() { Name = "Mark as purchased", Exact = true }).ClickAsync();
@@ -108,7 +110,9 @@ public sealed partial class WebHostTests
         await Expect(page.Locator("h1")).ToHaveTextAsync("Updated browser birthday");
         await page.Locator(".share-entry button").ClickAsync();
         await Expect(page.Locator(".share-entry")).ToContainTextAsync("Revoked");
-        await guestPage.ReloadAsync();
+        // Returning to the tab must revalidate access without a manual refresh or navigation.
+        await guestPage.BringToFrontAsync();
+        await guestPage.EvaluateAsync("window.dispatchEvent(new Event('focus'))");
         await Expect(guestPage.GetByRole(AriaRole.Alert)).ToContainTextAsync("unavailable");
         // Discover the same list without a bearer link, while retaining owner privacy.
         await page.GotoAsync(origin + "/profile");

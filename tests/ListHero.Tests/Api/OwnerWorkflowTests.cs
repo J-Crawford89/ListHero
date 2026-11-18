@@ -263,6 +263,10 @@ public sealed partial class OwnerWorkflowTests
         public Func<Guid, bool> PurchaseExists { get; set; } = _ => false;
         public Task<IReadOnlyList<WishList>> GetByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<WishList>>(Lists.Values.Where(list => list.OwnerId == ownerId && !list.IsArchived).ToArray());
+        public Task<IReadOnlyList<WishListSummaryResponse>> GetOwnerPreviewAsync(Guid ownerId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<WishListSummaryResponse>>(Lists.Values.Where(list => list.OwnerId == ownerId && !list.IsArchived)
+                .OrderByDescending(list => list.CreatedAt).ThenBy(list => list.Id).Take(5)
+                .Select(list => new WishListSummaryResponse(list.Id, list.Name, list.Description, list.IsPublic, list.CreatedAt)).ToArray());
         public Task<WishList?> GetOwnedAsync(Guid listId, Guid ownerId, CancellationToken cancellationToken = default)
             => Task.FromResult(Lists.TryGetValue(listId, out var list) && list.OwnerId == ownerId && !list.IsArchived ? list : null);
         public Task<IReadOnlyList<WishListItem>> GetItemsAsync(Guid listId, CancellationToken cancellationToken = default)
