@@ -89,9 +89,10 @@ public sealed partial class OwnerWorkflowTests
         Assert.NotNull((await verify.SavedLists.SingleAsync()).ArchivedAt);
     }
 
-    private static async Task<SavedListFixture> CreateSavedListFixtureAsync(string suffix)
+    private static async Task<SavedListFixture> CreateSavedListFixtureAsync(string suffix, bool pooling = true)
     {
         var connection = IsolatedSqlConnection(suffix);
+        if (!pooling) connection = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connection) { Pooling = false }.ConnectionString;
         var now = DateTimeOffset.UtcNow;
         var owner = new User("https://test", Guid.NewGuid().ToString(), "Owner", now);
         var buyer = new User("https://test", Guid.NewGuid().ToString(), "Buyer", now);
@@ -108,7 +109,8 @@ public sealed partial class OwnerWorkflowTests
     private sealed record SavedListFixture(string Connection, Guid OwnerId, Guid BuyerId, Guid ListId, Guid ShareId, DateTimeOffset Now)
     {
         public ListHeroDbContext Open(params IInterceptor[] interceptors)
-            => new(new DbContextOptionsBuilder<ListHeroDbContext>().UseSqlServer(Connection).AddInterceptors(interceptors).Options);
+            => new(new DbContextOptionsBuilder<ListHeroDbContext>().UseSqlServer(Connection)
+                .AddInterceptors(new ListHero.Tests.Persistence.TestDatabaseOwnershipInterceptor()).AddInterceptors(interceptors).Options);
     }
 
     private sealed class SavedInsertInterceptor(Func<ListHeroDbContext, CancellationToken, Task> beforeInsert,

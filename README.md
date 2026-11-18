@@ -44,7 +44,7 @@ dotnet test ListHero.slnx --no-build --no-restore
 
 Package versions are centralized in `Directory.Packages.props`. NuGet sources are specified in `NuGet.Config`. Compiler warnings are treated as errors.
 
-The suite contains 200 cases. The default run executes 192 and explicitly skips seven SQL Server tests and one browser regression. To include the SQL tests, use a fresh database name; scenarios apply migrations to separate database suffixes and retain them for inspection:
+The default test run skips environment-dependent SQL Server and browser checks. To include the SQL tests, use a fresh database name; scenarios apply migrations to separate database suffixes and retain them for inspection:
 
 ```powershell
 $testDatabase = 'ListHero_Integration_' + [guid]::NewGuid().ToString('N')
@@ -56,6 +56,8 @@ Remove-Item Env:LISTHERO_TEST_SQL_CONNECTION
 Test identity injection exists only inside the test assembly and test-host configuration. The application does not accept test identity headers. SQL checks cover persistence, constraints, revocation/expiration, row versions, archival, undo, duplicate-request races, and concurrency recovery. Controlled signed-token tests exercise actual JWT middleware; live tenant acceptance checks remain separate.
 
 See [test coverage and full-suite instructions](docs/test-coverage.md) to run the headless browser regression, collect coverage, and enforce the per-assembly minimums. CI includes a Windows job with SQL and Chromium and requires every test to execute. Coverage excludes generated build output and migration/model metadata while retaining application and Razor component code.
+
+See [retention and recovery](docs/retention-and-restore.md) for preview-first cache/test-database maintenance, portable encrypted key-ring backups, and the synthetic LocalDB backup/restore drill. Business history is retained; no maintenance runs automatically.
 
 ## Run locally
 

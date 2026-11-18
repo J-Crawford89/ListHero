@@ -189,7 +189,8 @@ public sealed partial class OwnerWorkflowTests
                     services.RemoveAll<ListHeroDbContext>();
                     services.RemoveAll<DbContextOptions<ListHeroDbContext>>();
                     services.RemoveAll<Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration<ListHeroDbContext>>();
-                    services.AddDbContext<ListHeroDbContext>(options => options.UseSqlServer(sqlConnection));
+                    services.AddDbContext<ListHeroDbContext>(options => options.UseSqlServer(sqlConnection)
+                        .AddInterceptors(new ListHero.Tests.Persistence.TestDatabaseOwnershipInterceptor()));
                 }
                 else
                 {

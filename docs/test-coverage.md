@@ -1,6 +1,6 @@
 # Test coverage
 
-Updated 2026-11-18 after dashboard implementation. The suite contains 203 cases: 194 ordinary tests, eight opt-in SQL tests, and one opt-in browser regression that also uses SQL. The full run includes every case; the default run skips nine environment-dependent cases.
+Updated 2026-11-18 after the retention/recovery batch. The suite contains 409 cases. The full run includes every case; the default run skips environment-dependent SQL and browser checks. See the [quality review follow-ups](quality-review-2026-11-18.md) for changes since the original dashboard baseline.
 
 ## Measured result
 
@@ -9,22 +9,24 @@ The full Release suite passes with no skipped tests. The Release build has zero 
 | Assembly | Executable lines | Branches |
 | --- | ---: | ---: |
 | ListHero.Domain | 100.0% | 93.4% |
-| ListHero.Application | 98.9% | 93.1% |
-| ListHero.Infrastructure | 96.3% | 76.5% |
-| ListHero.Api | 96.3% | 80.3% |
+| ListHero.Application | 98.9% | 93.3% |
+| ListHero.Infrastructure | 98.1% | 90.5% |
+| ListHero.Api | 97.3% | 83.0% |
 | ListHero.Contracts | 96.8% | 100.0% |
-| ListHero.Client | 97.4% | 100.0% |
-| ListHero.Client.Api | 100.0% | 94.3% |
-| ListHero.UI | 96.8% | 88.5% |
-| ListHero.Web | 89.0% | 75.0% |
+| ListHero.Client | 97.7% | 100.0% |
+| ListHero.Client.Api | 100.0% | 96.4% |
+| ListHero.UI | 97.4% | 91.6% |
+| ListHero.Web | 92.6% | 78.2% |
 
-Aggregate: 1676/1730 executable lines and 1001/1134 branches. All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
+Aggregate: 2579/2649 executable lines and 1689/1890 branches. All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
 
-Latest local evidence: `.artifacts/dashboard-complete/coverage.trx` and `.artifacts/dashboard-complete/ba08a730-b40c-45ed-a262-e0e9434ff7e9/coverage.cobertura.xml`. Both are Git-ignored.
+Latest local evidence: `.artifacts/qol-retention-complete/coverage.trx` and `.artifacts/qol-retention-complete/a46558ff-d4cd-4622-8732-f37d8bbc19ad/coverage.cobertura.xml`. Both are Git-ignored.
 
 The original audit had 50 passing cases, low client HTTP coverage, no Web host measurement, and no continuous SQL/coverage enforcement. Its unfiltered totals included generated code, so its aggregate percentage should not be compared directly with this consistently filtered baseline.
 
 ## Gaps closed
+
+- **Retention and recovery:** preview/apply cache isolation, retained guest/archived history, exact-name/ownership/age/activity guards on local database cleanup, safe command failures, encrypted key/certificate portability, revocation preservation, wrong-password/tamper/application failures, and authenticated malicious bundle rejection. A native synthetic LocalDB backup is restored to a separate database and checked for integrity, exact entity data/history, recovered share tokens, original guest ownership, cookie protection, and a protected cache probe. No live Azure restore, real MSAL refresh, or recovery-time guarantee is implied. See [retention and recovery](retention-and-restore.md).
 
 - **Permissions and privacy:** every owner-only operation is denied to anonymous callers, another user, an Admin, and a caller without the API scope, even with a valid share link. Tests cover forged/archived guest credentials, mismatched list/item/mark/link identifiers, different actors reusing a mark key, malformed/stale row versions, and purchase-free owner serialization. Existing public/private access and owner-precedence tests remain.
 - **Client HTTP and orchestration:** tests exercise all transport methods, routes, payloads, current per-request tokens, capability headers, anonymous token avoidance, cancellation, empty responses, and actionable 400/401/403/404/409/500 errors. Guest ownership is persisted before a mark is sent; storage failure prevents an unrecoverable mark. Connection-status tests distinguish readiness, network failure, timeout, and caller cancellation.
