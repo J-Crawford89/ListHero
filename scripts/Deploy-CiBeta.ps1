@@ -23,7 +23,7 @@ $plan = Invoke-HostingAzure -Arguments @('appservice', 'plan', 'show', '--resour
 if ($plan.name -ne 'F1' -or $plan.tier -ne 'Free') { throw 'The beta hosting plan must remain F1 / Free.' }
 foreach ($name in @($apiName, $webName)) {
     $site = Invoke-HostingAzure -Arguments @('webapp', 'show', '--resource-group', $hostingGroup,
-        '--name', $name, '--subscription', $hostingSubscription, '--query', '{plan:serverFarmId,state:state}') -Json
+        '--name', $name, '--subscription', $hostingSubscription, '--query', '{plan:appServicePlanId || serverFarmId,state:state}') -Json
     if ($site.plan -ne $plan.id -or $site.state -ne 'Running') { throw 'Both beta apps must use the existing running free plan.' }
 }
 $database = Invoke-HostingAzure -Arguments @('sql', 'db', 'show', '--resource-group', $hostingGroup,
