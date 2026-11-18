@@ -30,7 +30,8 @@ public sealed partial class WebHostTests
         await using (var factory = new WebFactory().WithWebHostBuilder(builder => ApplySettings(builder, settings)))
         {
             protectedValue = factory.Services.GetRequiredService<IDataProtectionProvider>().CreateProtector("restart-check").Protect("private payload");
-            Assert.IsType<SqlServerCache>(factory.Services.GetRequiredService<IDistributedCache>());
+            Assert.IsType<ListHero.Web.Services.DiagnosticDistributedCache>(factory.Services.GetRequiredService<IDistributedCache>());
+            Assert.Equal("TokenCache", factory.Services.GetRequiredService<IOptions<SqlServerCacheOptions>>().Value.TableName);
             Assert.True(factory.Services.GetRequiredService<IOptions<MsalDistributedTokenCacheAdapterOptions>>().Value.Encrypt);
         }
         Assert.All(Directory.GetFiles(directory, "key-*.xml"), path =>

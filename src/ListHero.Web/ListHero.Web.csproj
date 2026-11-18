@@ -14,5 +14,6 @@
     <PackageReference Include="Microsoft.Identity.Web.UI" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" />
     <Compile Include="../Hosting/HostedDataProtection.cs" Link="Hosting/HostedDataProtection.cs" />
+    <Compile Include="../Hosting/OperationalDiagnostics.cs" Link="Hosting/OperationalDiagnostics.cs" />
   </ItemGroup>
 </Project>

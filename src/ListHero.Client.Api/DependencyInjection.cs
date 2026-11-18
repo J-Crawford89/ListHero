@@ -11,32 +11,33 @@ public static class DependencyInjection
             throw new ArgumentException("The API address must be an absolute HTTP or HTTPS URL.", nameof(baseAddress));
         if (!baseAddress.AbsolutePath.EndsWith('/'))
             throw new ArgumentException("The API address must end with a slash.", nameof(baseAddress));
+        services.AddTransient<ApiDiagnosticsHandler>();
         services.AddHttpClient<IAppStatusApi, AppStatusApiClient>(http =>
         {
             http.BaseAddress = baseAddress;
             http.Timeout = TimeSpan.FromSeconds(10);
-        });
-        services.AddHttpClient<IDashboardApi, DashboardApiClient>(http => { http.BaseAddress = baseAddress; http.Timeout = TimeSpan.FromSeconds(30); });
+        }).AddHttpMessageHandler<ApiDiagnosticsHandler>();
+        services.AddHttpClient<IDashboardApi, DashboardApiClient>(http => { http.BaseAddress = baseAddress; http.Timeout = TimeSpan.FromSeconds(30); }).AddHttpMessageHandler<ApiDiagnosticsHandler>();
         services.AddHttpClient<IWishListApi, WishListApiClient>(http =>
         {
             http.BaseAddress = baseAddress;
             http.Timeout = TimeSpan.FromSeconds(30);
-        });
+        }).AddHttpMessageHandler<ApiDiagnosticsHandler>();
         services.AddHttpClient<IDiscoveryApi, DiscoveryApiClient>(http =>
         {
             http.BaseAddress = baseAddress;
             http.Timeout = TimeSpan.FromSeconds(30);
-        });
+        }).AddHttpMessageHandler<ApiDiagnosticsHandler>();
         services.AddHttpClient<IPublicProfileApi, PublicProfileApiClient>(http =>
         {
             http.BaseAddress = baseAddress;
             http.Timeout = TimeSpan.FromSeconds(30);
-        });
+        }).AddHttpMessageHandler<ApiDiagnosticsHandler>();
         services.AddHttpClient<IListCollaborationApi, ListCollaborationApiClient>(http =>
         {
             http.BaseAddress = baseAddress;
             http.Timeout = TimeSpan.FromSeconds(30);
-        });
+        }).AddHttpMessageHandler<ApiDiagnosticsHandler>();
         return services;
     }
 }

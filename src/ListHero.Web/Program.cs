@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddOperationalDiagnostics();
 var authenticationEnabled = builder.Configuration.GetValue<bool>("Authentication:Enabled");
 if (!authenticationEnabled && !builder.Environment.IsDevelopment())
     throw new InvalidOperationException("Configure Entra External ID before starting outside Development.");
@@ -41,6 +42,7 @@ if (authenticationEnabled)
             throw new InvalidOperationException("Hosted authentication requires the persistent token cache connection.");
         builder.Services.AddDistributedMemoryCache();
     }
+    builder.Services.ObserveDistributedTokenCache();
     builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
         .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("EntraExternalId"))
         .EnableTokenAcquisitionToCallDownstreamApi(scopes)
@@ -62,6 +64,7 @@ if (authenticationEnabled)
             options.TokenValidationParameters.NameClaimType = "name";
             options.TokenValidationParameters.RoleClaimType = "roles";
         });
+    builder.Services.PostConfigure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, AuthenticationDiagnostics.Configure);
 }
 else
 {
@@ -74,6 +77,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddHostedDataProtection(builder.Configuration, "ListHero.Web");
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddScoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, DiagnosticCircuitHandler>();
 builder.Services.AddListHeroClient();
 builder.Services.AddListHeroApiClient(new Uri(builder.Configuration["ListHeroApi:BaseUrl"]
     ?? throw new InvalidOperationException("ListHeroApi:BaseUrl is required.")));
@@ -84,6 +88,7 @@ builder.Services.AddScoped<IListShareUrlBuilder>(services => new ListShareUrlBui
     builder.Configuration["Sharing:PublicWebBaseUrl"] ?? services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().BaseUri)));
 
 var app = builder.Build();
+app.UseOperationalDiagnostics("Web");
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -118,32 +123,39 @@ if (authenticationEnabled)
         [OpenIdConnectDefaults.AuthenticationScheme])).AllowAnonymous();
     app.MapPost("/account/pending-return", async (HttpContext context, IAntiforgery antiforgery, IDataProtectionProvider protection) =>
     {
-        try { await antiforgery.ValidateRequestAsync(context); } catch (AntiforgeryValidationException) { return Results.BadRequest(); }
+        try { await antiforgery.ValidateRequestAsync(context); }
+        catch (AntiforgeryValidationException) { AuthenticationDiagnostics.SessionEvent(context, "pending-return", "antiforgery-rejected"); return Results.BadRequest(); }
         var form = await context.Request.ReadFormAsync();
         var destination = form["destination"].ToString(); var parts = destination.Split('#', 2);
-        if (SessionPolicy.SafeReturn(parts[0]) != parts[0] || (parts.Length == 2 && (parts[1].Length > 128 || parts[1].Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-'))))) return Results.BadRequest();
+        if (SessionPolicy.SafeReturn(parts[0]) != parts[0] || (parts.Length == 2 && (parts[1].Length > 128 || parts[1].Any(c => !char.IsAsciiLetterOrDigit(c) && c is not ('_' or '-')))))
+        { AuthenticationDiagnostics.SessionEvent(context, "pending-return", "destination-rejected"); return Results.BadRequest(); }
         context.Response.Cookies.Append("ListHero.PendingReturn", protection.CreateProtector("pending-return-v1").ToTimeLimitedDataProtector().Protect(destination, TimeSpan.FromMinutes(10)), new CookieOptions { HttpOnly = true, Secure = true, SameSite = SameSiteMode.Lax, MaxAge = TimeSpan.FromMinutes(10), Path = "/account" });
+        AuthenticationDiagnostics.SessionEvent(context, "pending-return", "created");
         return Results.NoContent();
     }).AllowAnonymous();
     app.MapGet("/account/resume", (HttpContext context, IDataProtectionProvider protection) =>
     {
         var target = "/dashboard";
         if (context.Request.Cookies.TryGetValue("ListHero.PendingReturn", out var pending))
-        { try { target = protection.CreateProtector("pending-return-v1").ToTimeLimitedDataProtector().Unprotect(pending); } catch (System.Security.Cryptography.CryptographicException) { } }
+        { try { target = protection.CreateProtector("pending-return-v1").ToTimeLimitedDataProtector().Unprotect(pending); }
+          catch (System.Security.Cryptography.CryptographicException) { AuthenticationDiagnostics.SessionEvent(context, "resume", "invalid-protected-context"); } }
         context.Response.Cookies.Delete("ListHero.PendingReturn", new CookieOptions { Path = "/account", Secure = true });
+        AuthenticationDiagnostics.SessionEvent(context, "resume", "completed");
         return Results.Redirect(target);
     }).RequireAuthorization();
     app.MapPost("/account/session", async (HttpContext context, IAntiforgery antiforgery) =>
     {
-        try { await antiforgery.ValidateRequestAsync(context); } catch (AntiforgeryValidationException) { return Results.BadRequest(); }
+        try { await antiforgery.ValidateRequestAsync(context); }
+        catch (AntiforgeryValidationException) { AuthenticationDiagnostics.SessionEvent(context, "probe", "antiforgery-rejected"); return Results.BadRequest(); }
         var ticket = await context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return Results.Json(new { session = ticket.Principal?.FindFirst("ListHero.SessionId")?.Value });
     }).AllowAnonymous();
     app.MapPost("/account/sign-out", async (HttpContext context, IAntiforgery antiforgery) =>
     {
         try { await antiforgery.ValidateRequestAsync(context); }
-        catch (AntiforgeryValidationException) { return (IResult)Results.BadRequest(); }
+        catch (AntiforgeryValidationException) { AuthenticationDiagnostics.SessionEvent(context, "sign-out", "antiforgery-rejected"); return (IResult)Results.BadRequest(); }
         context.Response.Cookies.Delete("ListHero.PendingReturn", new CookieOptions { Path = "/account", Secure = true });
+        AuthenticationDiagnostics.SessionEvent(context, "sign-out", "requested");
         return Results.SignOut(
             new Microsoft.AspNetCore.Authentication.AuthenticationProperties { RedirectUri = "/" },
             [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]);

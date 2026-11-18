@@ -1,4 +1,9 @@
 param([string]$ReleaseDirectory = '.artifacts/ci-beta')
+$ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'DeploymentDiagnostics.Common.ps1')
+$taskDeploymentClock = [Diagnostics.Stopwatch]::StartNew()
+$taskDeploymentStage = 'preflight'
+try {
 . (Join-Path $PSScriptRoot 'AzureHosting.Common.ps1') -UseSystemAzureCli
 Assert-FreeHostingTemplate
 $account = Assert-HostingAccount
@@ -12,6 +17,7 @@ foreach ($file in @('Api.zip', 'Web.zip', 'Migrations/HostingDatabase.dll', 'rel
     if (!(Test-Path -LiteralPath (Join-Path $release $file))) { throw "Missing release file: $file" }
 }
 $manifest = Get-Content -LiteralPath (Join-Path $release 'release.json') -Raw | ConvertFrom-Json
+if ($manifest.Commit -notmatch '^[a-fA-F0-9]{40}$') { throw 'The release manifest must identify a valid tested commit.' }
 if ($env:GITHUB_SHA -and $manifest.Commit -ne $env:GITHUB_SHA) { throw 'Release does not match the tested commit.' }
 if (!$env:LISTHERO_DEPLOY_ADMIN_CONNECTION) { throw 'The protected beta migration connection is required.' }
 $apiName = 'listhero-api-yj3pk6oimchdi'
@@ -46,24 +52,36 @@ if (![Net.IPAddress]::TryParse($address, [ref]$parsedAddress) -or $parsedAddress
 }
 $firewallName = 'ListHeroCI-' + [guid]::NewGuid().ToString('N')
 try {
+    $taskDeploymentStage = 'runner-firewall'
     Invoke-HostingAzure -Arguments @('sql', 'server', 'firewall-rule', 'create', '--resource-group', $hostingGroup,
         '--server', $sqlName, '--name', $firewallName, '--start-ip-address', $address,
         '--end-ip-address', $address, '--subscription', $hostingSubscription)
-    & dotnet (Join-Path $release 'Migrations/HostingDatabase.dll') --migrate-only
-    if ($LASTEXITCODE -ne 0) { throw 'Database migrations failed; applications were not deployed.' }
+    $taskDeploymentStage = 'migration'
+    # A SQL/credential failure can contain connection details. Do not forward native output.
+    Invoke-BetaMigration -Assembly (Join-Path $release 'Migrations/HostingDatabase.dll')
     foreach ($hostName in @('Api', 'Web')) {
         $appName = if ($hostName -eq 'Api') { $apiName } else { $webName }
+        $taskDeploymentStage = if ($hostName -eq 'Api') { 'api-deploy' } else { 'web-deploy' }
         Write-Host "Deploying $hostName from tested commit $($manifest.Commit)."
         Invoke-HostingAzure -Arguments @('webapp', 'deploy', '--resource-group', $hostingGroup, '--name', $appName,
             '--src-path', (Join-Path $release "$hostName.zip"), '--type', 'zip', '--subscription', $hostingSubscription)
     }
 } finally {
+    $taskPreviousStage = $taskDeploymentStage
+    $taskDeploymentStage = 'firewall-cleanup'
     Invoke-HostingAzure -Arguments @('sql', 'server', 'firewall-rule', 'delete', '--resource-group', $hostingGroup,
         '--server', $sqlName, '--name', $firewallName, '--subscription', $hostingSubscription)
+    $taskDeploymentStage = $taskPreviousStage
 }
+$taskDeploymentStage = 'verification'
 & (Join-Path $PSScriptRoot 'Test-FreeBeta.ps1') -WebUrl "https://$webName.azurewebsites.net/" `
     -ApiUrl "https://$apiName.azurewebsites.net/" -UseSystemAzureCli
 if ($env:GITHUB_STEP_SUMMARY) {
     "Deployed commit $($manifest.Commit) to [List Hero beta](https://$webName.azurewebsites.net/). Live checks passed." |
         Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+}
+Write-BetaDeploymentDiagnostic -Stage complete -Outcome success -ElapsedMs $taskDeploymentClock.ElapsedMilliseconds
+} catch {
+    Write-BetaDeploymentDiagnostic -Stage $taskDeploymentStage -Outcome failure -ElapsedMs $taskDeploymentClock.ElapsedMilliseconds
+    throw "Beta deployment failed at stage '$taskDeploymentStage'. Review the redacted deployment diagnostic and Azure status; raw command/exception details were withheld."
 }

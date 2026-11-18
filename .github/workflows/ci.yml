@@ -110,16 +110,26 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Package the tested commit
+        id: package
         shell: pwsh
         run: ./scripts/Publish-CiBeta.ps1
       - name: Sign in to Azure using GitHub identity
+        id: azure_login
         uses: Azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       - name: Migrate, deploy, and check the existing free beta
+        id: deploy
         shell: pwsh
         env:
           LISTHERO_DEPLOY_ADMIN_CONNECTION: ${{ secrets.BETA_MIGRATION_CONNECTION }}
         run: ./scripts/Deploy-CiBeta.ps1
+      - name: Record failure before deployment starts
+        if: failure() && steps.deploy.outcome != 'failure'
+        shell: pwsh
+        env:
+          LISTHERO_PACKAGE_OUTCOME: ${{ steps.package.outcome }}
+          LISTHERO_LOGIN_OUTCOME: ${{ steps.azure_login.outcome }}
+        run: ./scripts/Write-CiFailureSummary.ps1

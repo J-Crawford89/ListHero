@@ -12,6 +12,7 @@ using Microsoft.Identity.Web;
 using ListHero.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddOperationalDiagnostics();
 var authenticationEnabled = builder.Configuration.GetValue<bool>("Authentication:Enabled");
 if (!authenticationEnabled && !builder.Environment.IsDevelopment())
     throw new InvalidOperationException("Configure Entra External ID before starting outside Development.");
@@ -50,10 +51,11 @@ builder.Services.AddAuthorization(options =>
         .RequireRole(AppRoles.Admin).Build());
 });
 
-builder.Services.AddProblemDetails();
+builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
+    context.ProblemDetails.Extensions["requestId"] = context.HttpContext.TraceIdentifier);
 builder.Services.AddExceptionHandler<ApplicationExceptionHandler>();
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks().AddCheck<ListHero.Api.Diagnostics.SqlReadinessCheck>("sql", tags: ["ready"]);
 builder.Services.AddListHeroApplication();
 var connectionString = builder.Configuration.GetConnectionString("ListHero")
     ?? throw new InvalidOperationException("A ListHero SQL Server connection string is required.");
@@ -61,6 +63,7 @@ builder.Services.AddListHeroInfrastructure(connectionString, builder.Configurati
 builder.Services.AddHostedDataProtection(builder.Configuration, "ListHero.Api");
 
 var app = builder.Build();
+app.UseOperationalDiagnostics("Api");
 app.UseExceptionHandler();
 app.Use(async (context, next) =>
 {
@@ -73,7 +76,17 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 if (app.Environment.IsDevelopment()) app.MapOpenApi().AllowAnonymous();
-app.MapHealthChecks("/health/live").AllowAnonymous();
+app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new()
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = (context, report) =>
+    {
+        context.Response.ContentType = "text/plain; charset=utf-8";
+        context.Response.Headers.CacheControl = "no-store";
+        return context.Response.WriteAsync(report.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy ? "ready" : "unavailable");
+    }
+}).AllowAnonymous();
 app.MapGet("/api/status", () => new AppStatusResponse("List Hero", "available"))
     .AllowAnonymous().WithName("GetAppStatus");
 app.MapGet("/api/session", (HttpContext context) => new UserSessionResponse(

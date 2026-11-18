@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using ListHero.Hosting;
 namespace ListHero.Web.Services;
 public static class SessionPolicy
 {
@@ -22,6 +23,8 @@ public static class SessionPolicy
                 identity.AddClaim(new(Started, started));
                 identity.AddClaim(new("ListHero.SessionId", Guid.NewGuid().ToString("N")));
             }
+            AuthenticationDiagnostics.Logger(c.HttpContext, "Session").LogInformation(new EventId(2100, "SessionCreated"),
+                "App session created {Persistent} {IssuedUtc} {ExpiresUtc}", c.Properties.IsPersistent, c.Properties.IssuedUtc, c.Properties.ExpiresUtc);
         };
         var validate = options.Events.OnValidatePrincipal;
         options.Events.OnValidatePrincipal = async c =>
@@ -30,7 +33,11 @@ public static class SessionPolicy
             if (c.Principal is null) return;
             var origin = c.Properties.IssuedUtc ?? DateTimeOffset.MinValue;
             if (c.Properties.Items.TryGetValue(Started, out var text) && long.TryParse(text, out var seconds)) origin = DateTimeOffset.FromUnixTimeSeconds(seconds);
-            if ((options.TimeProvider ?? TimeProvider.System).GetUtcNow() - origin >= TimeSpan.FromDays(90)) c.RejectPrincipal();
+            if ((options.TimeProvider ?? TimeProvider.System).GetUtcNow() - origin >= TimeSpan.FromDays(90))
+            {
+                c.RejectPrincipal();
+                AuthenticationDiagnostics.Logger(c.HttpContext, "Session").LogInformation(new EventId(2101, "SessionExpired"), "App session rejected at absolute expiry");
+            }
             else if (!c.Properties.Items.ContainsKey(Started)) { c.Properties.Items[Started] = origin.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture); c.ShouldRenew = true; }
         };
     }

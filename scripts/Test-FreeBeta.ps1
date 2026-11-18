@@ -21,6 +21,7 @@ try {
         @{ Url = $state.apiUrl.value + 'api/status'; Status = 200 },
         @{ Url = $state.apiUrl.value + 'api/lists/mine'; Status = 401 },
         @{ Url = $state.apiUrl.value + 'api/lists/' + [guid]::NewGuid().ToString() + '/view'; Status = 404 },
+        @{ Url = $state.apiUrl.value + 'health/ready'; Status = 200 },
         @{ Url = $state.webUrl.value + 'account/sign-in'; Status = 302 }
     )
     foreach ($check in $checks) {
