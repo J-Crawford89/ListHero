@@ -7,7 +7,7 @@ namespace ListHero.Application.Lists;
 public interface ISavedListStore
 {
     Task<ListShareLink?> GetShareAsync(Guid userId, Guid listId, CancellationToken ct);
-    Task SaveAsync(Guid userId, Guid listId, Guid? shareId, bool pinned, DateTimeOffset now, CancellationToken ct);
+    Task SaveAsync(Guid userId, Guid listId, Guid? shareId, bool? pinned, DateTimeOffset now, CancellationToken ct);
     Task RemoveAsync(Guid userId, Guid listId, DateTimeOffset now, CancellationToken ct);
     Task<SavedListPage> GetAsync(Guid userId, int page, bool pinnedOnly, DateTimeOffset now, CancellationToken ct);
 }
@@ -15,7 +15,7 @@ public interface IDashboardService
 {
     Task<DashboardResponse> GetAsync(ExternalUserIdentity identity, CancellationToken ct = default);
     Task<SavedListPage> SavedAsync(ExternalUserIdentity identity, int page, CancellationToken ct = default);
-    Task SaveAsync(Guid listId, ListRequestAccess access, bool pinned, CancellationToken ct = default);
+    Task SaveAsync(Guid listId, ListRequestAccess access, bool? pinned, CancellationToken ct = default);
     Task RemoveAsync(ExternalUserIdentity identity, Guid listId, CancellationToken ct = default);
 }
 public sealed class DashboardService(IUserService users, IWishListStore lists, ISavedListStore saved,
@@ -35,7 +35,7 @@ public sealed class DashboardService(IUserService users, IWishListStore lists, I
         var user = await users.ResolveAsync(identity, ct);
         return await saved.GetAsync(user.Id, page, false, clock.GetUtcNow(), ct);
     }
-    public async Task SaveAsync(Guid listId, ListRequestAccess request, bool pinned, CancellationToken ct = default)
+    public async Task SaveAsync(Guid listId, ListRequestAccess request, bool? pinned, CancellationToken ct = default)
     {
         var user = await users.ResolveAsync(request.User ?? throw new UnauthorizedAccessException(), ct);
         var resolved = await access.ResolveAsync(listId, request, ct);

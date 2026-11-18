@@ -24,11 +24,17 @@ public sealed partial class OwnerWorkflowTests
         Assert.Equal(HttpStatusCode.NotFound, (await buyer.GetAsync($"/api/lists/{list.Id}/view")).StatusCode);
         await Assert.ThrowsAsync<ListHero.Client.Abstractions.Api.ApiRequestException>(() => api.SaveAsync(list.Id, false));
         var link = await JsonAsync<ShareLinkResponse>(await owner.PostAsJsonAsync($"/api/lists/{list.Id}/share-links/", new CreateShareLinkRequest()));
-        await api.SaveAsync(list.Id, false, link.Token);
+        await api.SaveAsync(list.Id, null, link.Token);
+        Assert.False(Assert.Single((await api.SavedAsync()).Items).IsPinned);
         Assert.NotNull((await buyer.GetFromJsonAsync<ListViewResponse>($"/api/lists/{list.Id}/view"))!.Viewer);
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/lists/{list.Id}/view")).StatusCode);
         await api.SaveAsync(list.Id, true);
         var dashboard = await api.GetAsync(); Assert.Single(dashboard.Pinned); Assert.Single(dashboard.Saved); Assert.Empty(dashboard.Owned);
+        await api.SaveAsync(list.Id, null, link.Token);
+        Assert.Single((await api.GetAsync()).Pinned);
+        // Older/new clients may omit the preference entirely when just saving access.
+        Assert.Equal(HttpStatusCode.NoContent, (await buyer.PutAsJsonAsync($"/api/dashboard/saved/{list.Id}", new { })).StatusCode);
+        Assert.Single((await api.GetAsync()).Pinned);
         var json = JsonSerializer.Serialize(dashboard);
         Assert.DoesNotContain(link.Token!, json); Assert.DoesNotContain("Purchased", json); Assert.DoesNotContain("Fulfilled", json);
         await ownApi.SaveAsync(list.Id, true); Assert.True(Assert.Single((await ownApi.GetAsync()).Pinned).IsOwner);

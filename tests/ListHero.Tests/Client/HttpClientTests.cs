@@ -17,6 +17,24 @@ public sealed class HttpClientTests
     private static readonly OwnerWishListResponse Owner = new(ListId, "Wishes", "", false, [], "AQAAAAAAAAA=");
 
     [Fact]
+    public async Task Saving_access_sends_no_pin_change_while_pin_controls_send_an_explicit_preference()
+    {
+        using var handler = new RecordingHandler { Status = HttpStatusCode.NoContent };
+        using var http = new HttpClient(handler) { BaseAddress = new("https://example.test/root/") };
+        var api = new DashboardApiClient(http, new CountingTokens());
+        await api.SaveAsync(ListId, null, "secret-share");
+        AssertRequest(handler, HttpMethod.Put, $"api/dashboard/saved/{ListId}", "token-1");
+        Assert.Equal(JsonValueKind.Null, handler.Body!.Value.GetProperty("isPinned").ValueKind);
+        Assert.Equal("secret-share", handler.Share);
+        Assert.DoesNotContain("secret-share", handler.Address!.AbsoluteUri);
+        await api.SaveAsync(ListId, true);
+        Assert.True(handler.Body!.Value.GetProperty("isPinned").GetBoolean());
+        Assert.Null(handler.Share);
+        await api.SaveAsync(ListId, false);
+        Assert.False(handler.Body!.Value.GetProperty("isPinned").GetBoolean());
+    }
+
+    [Fact]
     public async Task Every_owner_HTTP_operation_sends_the_correct_route_payload_and_current_token()
     {
         var handler = new RecordingHandler();

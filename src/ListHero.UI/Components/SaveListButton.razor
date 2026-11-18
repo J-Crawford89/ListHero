@@ -10,6 +10,17 @@
     [Parameter] public string? ShareToken { get; set; }
     [Parameter] public bool Pin { get; set; }
     private bool done;
-    protected override void OnParametersSet() => done = false;
-    private Task Save() => RunAsync(async () => { await Saved.SaveAsync(ListId, Pin, ShareToken, Cancellation); done = true; });
+    private (Guid ListId, string? ShareToken, bool Pin) context;
+    protected override void OnParametersSet()
+    {
+        var next = (ListId, ShareToken, Pin);
+        if (context != next) done = false;
+        context = next;
+    }
+    private Task Save() => RunAsync(async () =>
+    {
+        var saving = context;
+        await Saved.SaveAsync(saving.ListId, saving.Pin ? true : null, saving.ShareToken, Cancellation);
+        if (context == saving) done = true;
+    });
 }

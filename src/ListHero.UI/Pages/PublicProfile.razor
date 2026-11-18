@@ -30,23 +30,108 @@
                 {
                     <label class="discovery-consent"><InputCheckbox @bind-Value="draft.ConfirmDiscovery" /> I understand that my chosen name, handle and all my public lists will appear in discovery.</label>
                 }
-                <button type="submit" class="button-primary">Save public profile</button>
-                <button type="button" class="button-secondary" @onclick="Reload">Reload saved profile</button>
+                <button type="submit" class="button-primary" disabled="@hasConflict">Save public profile</button>
+                <button type="button" class="button-secondary" @onclick="RequestReload">Reload saved profile</button>
             </fieldset>
         </EditForm>
+        @if (confirmDiscard)
+        {
+            <section aria-label="Discard profile changes" class="form-card">
+                <p>Reloading will discard your unsaved profile changes.</p>
+                <button disabled="@IsBusy" @onclick="Reload">Discard changes and reload</button>
+                <button disabled="@IsBusy" @onclick="CancelReload">Keep editing</button>
+            </section>
+        }
+        @if (hasConflict)
+        {
+            <section aria-label="Profile conflict" class="form-card">
+                <p>Your profile changed in another session. Your draft is still in the form. Load the latest saved version to compare before saving again.</p>
+                <button disabled="@IsBusy" @onclick="LoadLatest">Load latest version</button>
+                @if (latest is not null)
+                {
+                    <p>Latest saved name: <strong>@(latest.DisplayName ?? latest.SuggestedDisplayName)</strong></p>
+                    <p>Latest saved handle: <strong>@(latest.Handle is null ? "Not set" : $"@{latest.Handle}")</strong></p>
+                    @if (latest.Handle is not null && latest.Handle != draft.Handle)
+                    {
+                        <p>The handle was set in another session and cannot be changed. Keeping your draft will keep your display name and use the saved handle.</p>
+                    }
+                    <button disabled="@IsBusy" @onclick="KeepDraft">Use latest version and keep my draft</button>
+                    <button disabled="@IsBusy" @onclick="UseLatest">Discard my draft and use saved profile</button>
+                }
+            </section>
+        }
         @if (profile.Handle is not null) { <p>Your public address: <a href="@($"/people/{profile.Handle}")">@@@profile.Handle</a>. It becomes visible when you have a public list.</p> }
     }
 </section>
 @code {
     private OwnProfileResponse? profile;
     private UpdatePublicProfileRequest draft = new();
+    private OwnProfileResponse? latest;
+    private bool hasConflict;
+    private bool confirmDiscard;
     private string? notice;
     protected override async Task OnAfterRenderAsync(bool firstRender) { if (firstRender) await Reload(); }
-    private Task Reload() => RunAsync(async () => Apply(await Api.GetAsync(Cancellation)));
+    private Task Reload() => RunAsync(async () =>
+    {
+        notice = null;
+        Apply(await Api.GetAsync(Cancellation));
+    });
+    private async Task RequestReload()
+    {
+        if (profile is not null && (draft.DisplayName != (profile.DisplayName ?? profile.SuggestedDisplayName)
+            || draft.Handle != (profile.Handle ?? "") || draft.ConfirmDiscovery != (profile.Handle is not null)))
+        {
+            confirmDiscard = true;
+            return;
+        }
+        await Reload();
+    }
+    private void CancelReload() => confirmDiscard = false;
     private void Apply(OwnProfileResponse value)
     {
         profile = value;
         draft = new() { DisplayName = value.DisplayName ?? value.SuggestedDisplayName, Handle = value.Handle ?? "", RowVersion = value.RowVersion, ConfirmDiscovery = value.Handle is not null };
+        latest = null;
+        hasConflict = false;
+        confirmDiscard = false;
     }
-    private Task Save() => RunAsync(async () => { Apply(await Api.UpdateAsync(draft, Cancellation)); notice = "Your public profile is saved."; });
+    private Task LoadLatest() => RunAsync(async () => latest = await Api.GetAsync(Cancellation));
+    private Task KeepDraft() => RunAsync(() =>
+    {
+        if (latest is null) return Task.CompletedTask;
+        profile = latest;
+        draft.RowVersion = latest.RowVersion;
+        if (latest.Handle is not null)
+        {
+            draft.Handle = latest.Handle;
+            draft.ConfirmDiscovery = true;
+        }
+        latest = null;
+        hasConflict = false;
+        confirmDiscard = false;
+        notice = "Your draft is ready. Review it and save when you're happy with the changes.";
+        return Task.CompletedTask;
+    });
+    private Task UseLatest() => RunAsync(() =>
+    {
+        if (latest is not null) Apply(latest);
+        notice = null;
+        return Task.CompletedTask;
+    });
+    private Task Save() => RunAsync(async () =>
+    {
+        if (hasConflict) return;
+        notice = null;
+        try
+        {
+            Apply(await Api.UpdateAsync(draft, Cancellation));
+            notice = "Your public profile is saved.";
+        }
+        catch (ApiConflictException)
+        {
+            hasConflict = true;
+            latest = null;
+            throw;
+        }
+    });
 }

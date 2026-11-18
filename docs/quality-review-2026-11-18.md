@@ -2,6 +2,17 @@
 
 Reviewed November 18, 2026. This is a static review of the solution's routing, authentication, authorization, persistence, client adapters, shared UI, tests, and deployment scripts. Findings below distinguish confirmed code behavior from suspected causes requiring browser/runtime evidence. No application settings, identity policies, or production behavior were changed. DinnerDial was not reviewed; a similar symptom there does not establish the same cause.
 
+## Follow-up implementation status
+
+The findings below record the original review. Two follow-up batches have since been implemented locally; neither has been pushed or deployed:
+
+- Session persistence and navigation: commit `8fe9141` adds remembered login, session renewal/revalidation, smart root routing, `/welcome`, and protected sign-in return navigation. See [session-navigation.md](session-navigation.md) for policy, validation, and limitations.
+- Saved-list and profile editing: saving/updating access preserves the existing pin unless a pin preference is explicitly supplied. New shortcuts start unpinned. Save confirmations survive unchanged parent refreshes, and late responses cannot show success for a different list/access context. Profile conflicts allow comparison with the saved version, explicit reuse of the latest version while keeping the draft, or intentional discard. Reloading a modified profile requires confirmation. Handles already claimed in another session remain immutable.
+
+Validation after the second batch: all 226 tests passed with no skips, including SQL Server and headless-browser tests. All nine assembly coverage gates passed. Local evidence: `.artifacts/qol-workflow-verified/coverage.trx` and its coverage attachment. Neither batch requires a business-data schema migration. General navigation/reauthentication draft preservation remains follow-up work.
+
+Next batch: bound dashboard preview queries in SQL, replace recursive duplicate-save retries, and pause viewer polling in hidden/offline tabs.
+
 ## Overall assessment
 
 Keep the current modular solution. Domain invariants, application authorization, persistence interfaces, separate HTTP clients, and reusable Razor UI are appropriate for this app. A rewrite, microservices, a generic repository layer, or a widget engine would add complexity without resolving the present friction.

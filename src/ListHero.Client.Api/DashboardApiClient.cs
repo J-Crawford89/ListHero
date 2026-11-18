@@ -10,7 +10,7 @@ public sealed class DashboardApiClient(HttpClient http, IApiAccessTokenProvider 
     { using var response = await SendAsync(HttpMethod.Get, "api/dashboard/", null, null, ct); return await response.Content.ReadFromJsonAsync<DashboardResponse>(ct) ?? throw new ApiRequestException("Empty dashboard response."); }
     public async Task<SavedListPage> SavedAsync(int page = 1, CancellationToken ct = default)
     { using var response = await SendAsync(HttpMethod.Get, $"api/dashboard/saved?page={page}", null, null, ct); return await response.Content.ReadFromJsonAsync<SavedListPage>(ct) ?? throw new ApiRequestException("Empty saved lists response."); }
-    public async Task SaveAsync(Guid listId, bool pinned, string? shareToken = null, CancellationToken ct = default)
+    public async Task SaveAsync(Guid listId, bool? pinned, string? shareToken = null, CancellationToken ct = default)
     { using var response = await SendAsync(HttpMethod.Put, $"api/dashboard/saved/{listId}", new SaveListRequest { IsPinned = pinned }, shareToken, ct); }
     public async Task RemoveAsync(Guid listId, CancellationToken ct = default)
     { using var response = await SendAsync(HttpMethod.Delete, $"api/dashboard/saved/{listId}", null, null, ct); }

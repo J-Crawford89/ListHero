@@ -282,7 +282,7 @@ public sealed partial class OwnerWorkflowTests
     private sealed class EmptySavedStore : ISavedListStore
     {
         public Task<ListShareLink?> GetShareAsync(Guid userId, Guid listId, CancellationToken ct) => Task.FromResult<ListShareLink?>(null);
-        public Task SaveAsync(Guid userId, Guid listId, Guid? shareId, bool pinned, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
+        public Task SaveAsync(Guid userId, Guid listId, Guid? shareId, bool? pinned, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
         public Task RemoveAsync(Guid userId, Guid listId, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
         public Task<SavedListPage> GetAsync(Guid userId, int page, bool pinnedOnly, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
     }
