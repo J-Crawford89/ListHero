@@ -7,9 +7,15 @@ namespace ListHero.Client.Api;
 public sealed class DashboardApiClient(HttpClient http, IApiAccessTokenProvider tokens) : IDashboardApi
 {
     public async Task<DashboardResponse> GetAsync(CancellationToken ct = default)
-    { using var response = await SendAsync(HttpMethod.Get, "api/dashboard/", null, null, ct); return await response.Content.ReadFromJsonAsync<DashboardResponse>(ct) ?? throw new ApiRequestException("Empty dashboard response."); }
+    {
+        using var response = await SendAsync(HttpMethod.Get, "api/dashboard/", null, null, ct);
+        return await ApiResponseReader.ReadRequiredAsync<DashboardResponse>(response, ct);
+    }
     public async Task<SavedListPage> SavedAsync(int page = 1, CancellationToken ct = default)
-    { using var response = await SendAsync(HttpMethod.Get, $"api/dashboard/saved?page={page}", null, null, ct); return await response.Content.ReadFromJsonAsync<SavedListPage>(ct) ?? throw new ApiRequestException("Empty saved lists response."); }
+    {
+        using var response = await SendAsync(HttpMethod.Get, $"api/dashboard/saved?page={page}", null, null, ct);
+        return await ApiResponseReader.ReadRequiredAsync<SavedListPage>(response, ct);
+    }
     public async Task SaveAsync(Guid listId, bool? pinned, string? shareToken = null, CancellationToken ct = default)
     { using var response = await SendAsync(HttpMethod.Put, $"api/dashboard/saved/{listId}", new SaveListRequest { IsPinned = pinned }, shareToken, ct); }
     public async Task RemoveAsync(Guid listId, CancellationToken ct = default)

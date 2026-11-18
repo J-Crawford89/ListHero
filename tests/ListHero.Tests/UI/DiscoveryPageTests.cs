@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace ListHero.Tests.UI;
 
-public sealed class DiscoveryPageTests
+public sealed partial class DiscoveryPageTests
 {
     [Fact]
     public void Lists_and_people_have_separate_results_paging_and_safe_view_links()
@@ -211,16 +211,27 @@ public sealed class DiscoveryPageTests
         public Guid Id { get; } = Guid.NewGuid();
         public bool Empty { get; set; }
         public Exception? Failure { get; set; }
+        public int Reads { get; private set; }
+        public CancellationToken LastReadCancellation { get; private set; }
         public UpdatePublicProfileRequest? Saved { get; private set; }
         public Task<DiscoveryPage<PublicListSummary>>? Pending { get; set; }
         public OwnProfileResponse Current { get; set; } = new(null, null, "Suggested name", "AQAAAAAAAAA=");
         private DiscoveryPage<PublicListSummary> Lists => new(Empty ? [] : [new(Id, "Birthday", "Wishes", DateTimeOffset.UtcNow, new("Jane", "jane"))], 1, 20, !Empty);
         public Task<DiscoveryPage<PublicListSummary>> GetListsAsync(DiscoveryQuery query, CancellationToken ct = default)
-            => Failure is not null ? Task.FromException<DiscoveryPage<PublicListSummary>>(Failure) : Pending ?? Task.FromResult(Lists);
+        {
+            Reads++; LastReadCancellation = ct;
+            return Failure is not null ? Task.FromException<DiscoveryPage<PublicListSummary>>(Failure) : Pending ?? Task.FromResult(Lists);
+        }
         public Task<DiscoveryPage<PublicPersonSummary>> GetPeopleAsync(DiscoveryQuery query, CancellationToken ct = default)
-            => Failure is not null ? Task.FromException<DiscoveryPage<PublicPersonSummary>>(Failure) : Task.FromResult(new DiscoveryPage<PublicPersonSummary>(Empty || string.IsNullOrEmpty(query.Query) ? [] : [new("Jane", "jane")], query.Page, 20, false));
+        {
+            Reads++; LastReadCancellation = ct;
+            return Failure is not null ? Task.FromException<DiscoveryPage<PublicPersonSummary>>(Failure) : Task.FromResult(new DiscoveryPage<PublicPersonSummary>(Empty || string.IsNullOrEmpty(query.Query) ? [] : [new("Jane", "jane")], query.Page, 20, false));
+        }
         public Task<PublicProfileResponse> GetProfileAsync(string handle, int page = 1, CancellationToken ct = default)
-            => Failure is not null ? Task.FromException<PublicProfileResponse>(Failure) : Task.FromResult(new PublicProfileResponse(new("Jane", handle), Lists));
+        {
+            Reads++; LastReadCancellation = ct;
+            return Failure is not null ? Task.FromException<PublicProfileResponse>(Failure) : Task.FromResult(new PublicProfileResponse(new("Jane", handle), Lists));
+        }
         public Task<OwnProfileResponse> GetAsync(CancellationToken ct = default)
             => Failure is not null ? Task.FromException<OwnProfileResponse>(Failure) : Task.FromResult(Current);
         public Task<OwnProfileResponse> UpdateAsync(UpdatePublicProfileRequest request, CancellationToken ct = default)

@@ -13,6 +13,10 @@ public sealed class AppStatusService(IAppStatusApi api) : IAppStatusService
                 ? new(true, "List Hero API is available.")
                 : new(false, "List Hero API is not ready.");
         }
+        catch (ApiRequestException exception)
+        {
+            return new(false, exception.Message);
+        }
         catch (HttpRequestException)
         {
             return new(false, "Could not reach the List Hero API.");

@@ -1,0 +1,8 @@
+<div role="alert" class="request-error">
+    <p>Choose a page from 1–@Maximum.</p>
+    <a href="@RecoveryUrl">Go to page 1</a>
+</div>
+@code {
+    [Parameter] public int Maximum { get; set; } = 100;
+    [Parameter, EditorRequired] public string RecoveryUrl { get; set; } = "";
+}

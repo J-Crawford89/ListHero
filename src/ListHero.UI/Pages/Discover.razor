@@ -18,7 +18,8 @@
         <input id="discovery-query" @bind="draft" maxlength="100" type="search" />
         <button type="submit" class="button-primary">Search</button>
     </form>
-    @if (Error is not null) { <div role="alert" class="request-error">@Error <button @onclick="Reload">Try again</button></div> }
+    @if (invalidPage) { <InvalidPage RecoveryUrl="@Link(People ? "people" : "lists", 1)" /> }
+    <RequestFeedback Error="@Error" RequiresSignIn="RequiresSignIn" Retry="Reload" />
     @if (IsBusy) { <p role="status">Searching…</p> }
     else if (Error is null && loaded)
     {
@@ -52,26 +53,40 @@
 @code {
     [Parameter, SupplyParameterFromQuery(Name = "q")] public string? Query { get; set; }
     [Parameter, SupplyParameterFromQuery(Name = "tab")] public string? Tab { get; set; }
-    [Parameter, SupplyParameterFromQuery(Name = "page")] public int? Page { get; set; }
-    private int CurrentPage => Page ?? 1;
+    [Parameter, SupplyParameterFromQuery(Name = "page")] public string[]? Page { get; set; }
+    private int currentPage = 1;
+    private int CurrentPage => currentPage;
     private string draft = "";
-    private bool pending, loaded;
+    private bool pending, loaded, invalidPage;
     private DiscoveryPage<PublicListSummary>? lists;
     private DiscoveryPage<PublicPersonSummary>? people;
     private bool People => Tab == "people";
     private bool HasMore => People ? people?.HasMore == true : lists?.HasMore == true;
-    protected override void OnParametersSet() { draft = Query ?? ""; pending = true; loaded = false; }
+    protected override void OnParametersSet()
+    {
+        ResetLoad();
+        draft = Query ?? "";
+        invalidPage = !PageQuery.TryParse(Page, 100, out currentPage);
+        pending = !invalidPage;
+        loaded = false;
+    }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (pending) { pending = false; await Reload(); }
     }
     private async Task Reload()
     {
+        if (invalidPage) return;
         loaded = false;
         var query = new DiscoveryQuery(Query, CurrentPage);
         if (People) await LoadAsync(ct => Api.GetPeopleAsync(query, ct), result => { people = result; loaded = true; });
         else await LoadAsync(ct => Api.GetListsAsync(query, ct), result => { lists = result; loaded = true; });
     }
     private string Link(string tab, int page) => $"/discover?tab={tab}&q={Uri.EscapeDataString(Query ?? "")}&page={page}";
-    private void Search() => Navigation.NavigateTo($"/discover?tab={(People ? "people" : "lists")}&q={Uri.EscapeDataString(draft.Trim())}&page=1");
+    private async Task Search()
+    {
+        var target = $"/discover?tab={(People ? "people" : "lists")}&q={Uri.EscapeDataString(draft.Trim())}&page=1";
+        if (Navigation.ToAbsoluteUri(target).AbsoluteUri == Navigation.Uri) await Reload();
+        else Navigation.NavigateTo(target);
+    }
 }

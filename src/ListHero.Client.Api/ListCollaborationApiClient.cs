@@ -45,7 +45,7 @@ public sealed class ListCollaborationApiClient(HttpClient http, IApiAccessTokenP
                 HttpStatusCode.BadRequest => "Check the quantity or expiration date and try again.",
                 _ => "We couldn't complete that request. Please try again."
             });
-        if (response.StatusCode == HttpStatusCode.NoContent) return default!;
-        return await response.Content.ReadFromJsonAsync<T>(ct) ?? throw new ApiRequestException("The API returned an empty response.");
+        if (response.StatusCode == HttpStatusCode.NoContent && typeof(T) == typeof(object)) return default!;
+        return await ApiResponseReader.ReadRequiredAsync<T>(response, ct, writeMayHaveSucceeded: method != HttpMethod.Get);
     }
 }

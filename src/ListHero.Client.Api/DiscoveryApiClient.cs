@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using ListHero.Client.Abstractions.Api;
 using ListHero.Contracts.Discovery;
 
@@ -25,6 +24,6 @@ public sealed class DiscoveryApiClient(HttpClient http) : IDiscoveryApi
                 HttpStatusCode.BadRequest => "Search using 2–100 characters and a valid page number.",
                 _ => "We couldn't load discovery. Please try again."
             });
-        return await response.Content.ReadFromJsonAsync<T>(ct) ?? throw new ApiRequestException("The API returned an empty response.");
+        return await ApiResponseReader.ReadRequiredAsync<T>(response, ct);
     }
 }

@@ -6,20 +6,28 @@
 <PageTitle>Saved lists — List Hero</PageTitle>
 <section class="content-page"><a href="/dashboard">← Dashboard</a><h1>Saved lists</h1>
     <p>Personal shortcuts to your lists and lists shared with you. Removing a shortcut never deletes the list.</p>
-    @if (Error is not null) { <p role="alert">@Error</p><button @onclick="Load">Try again</button> }
+    @if (invalidPage) { <InvalidPage Maximum="1000" RecoveryUrl="/saved?page=1" /> }
+    <RequestFeedback Error="@Error" RequiresSignIn="RequiresSignIn" Retry="Load" />
     @if (IsBusy) { <p role="status">Loading saved lists…</p> }
-    else if (entries is not null) {
+    else if (entries is not null && Error is null) {
         @if (entries.Items.Count == 0) { <p>No saved lists on this page. Open a shared list and choose “Save this list.”</p> }
         <SavedListCards Items="entries.Items" Changed="Load" />
         <nav aria-label="Saved list pages">@if (CurrentPage > 1) { <a href="@($"/saved?page={CurrentPage - 1}")">← Previous</a> } <span>Page @CurrentPage</span> @if (entries.HasMore && CurrentPage < 1000) { <a href="@($"/saved?page={CurrentPage + 1}")">Next →</a> }</nav>
     }
 </section>
 @code {
-    [SupplyParameterFromQuery] public int? Page { get; set; }
-    private int CurrentPage => Page ?? 1;
+    [Parameter, SupplyParameterFromQuery(Name = "page")] public string[]? Page { get; set; }
+    private int currentPage = 1;
+    private int CurrentPage => currentPage;
     private SavedListPage? entries;
-    private bool pending;
-    protected override void OnParametersSet() => pending = true;
+    private bool pending, invalidPage;
+    protected override void OnParametersSet()
+    {
+        ResetLoad();
+        invalidPage = !PageQuery.TryParse(Page, 1000, out currentPage);
+        pending = !invalidPage;
+        entries = null;
+    }
     protected override async Task OnAfterRenderAsync(bool firstRender) { if (pending) { pending = false; await Load(); } }
-    private Task Load() => LoadAsync(ct => Api.SavedAsync(CurrentPage, ct), value => entries = value);
+    private Task Load() => invalidPage ? Task.CompletedTask : LoadAsync(ct => Api.SavedAsync(CurrentPage, ct), value => entries = value);
 }

@@ -5,7 +5,7 @@ using ListHero.UI.Pages;
 using ListHero.UI.Components;
 using Microsoft.Extensions.DependencyInjection;
 namespace ListHero.Tests.UI;
-public sealed class DashboardPageTests
+public sealed partial class DashboardPageTests
 {
     [Fact]
     public void Dashboard_saves_owned_pins_and_saved_page_can_unpin_and_remove()
@@ -72,9 +72,17 @@ public sealed class DashboardPageTests
         private readonly Guid id = Guid.NewGuid(); public bool Pinned; public bool Empty; private bool saved; public string? Token;
         public bool? RequestedPin;
         public Task? PendingSave;
+        public Exception? ReadFailure;
+        public Task<SavedListPage>? PendingRead;
+        public int Reads;
         private SavedListSummary Entry => new(id, "My wishes", true, true, Pinned);
         public Task<DashboardResponse> GetAsync(CancellationToken ct = default) => Task.FromResult(new DashboardResponse(Pinned ? [Entry] : [], Empty ? [] : [new(id,"My wishes","",false,DateTimeOffset.UtcNow)], saved ? [Entry] : []));
-        public Task<SavedListPage> SavedAsync(int page = 1, CancellationToken ct = default) => Task.FromResult(new SavedListPage(saved ? [Entry] : [],page,false));
+        public Task<SavedListPage> SavedAsync(int page = 1, CancellationToken ct = default)
+        {
+            Reads++;
+            return ReadFailure is not null ? Task.FromException<SavedListPage>(ReadFailure)
+                : PendingRead ?? Task.FromResult(new SavedListPage(saved ? [Entry] : [],page,false));
+        }
         public async Task SaveAsync(Guid listId, bool? pinned, string? shareToken = null, CancellationToken ct = default)
         {
             if (PendingSave is not null) await PendingSave;

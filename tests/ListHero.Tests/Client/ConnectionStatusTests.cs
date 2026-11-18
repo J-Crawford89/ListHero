@@ -10,6 +10,7 @@ public sealed class ConnectionStatusTests
     [InlineData("not-ready", "not ready")]
     [InlineData("network", "Could not reach")]
     [InlineData("timeout", "timed out")]
+    [InlineData("invalid-response", "read the response")]
     public async Task Unavailable_API_is_reported_with_the_correct_reason(string outcome, string message)
     {
         var status = await new AppStatusService(new StatusApi(outcome)).CheckAsync();
@@ -27,6 +28,7 @@ public sealed class ConnectionStatusTests
         {
             "network" => throw new HttpRequestException(),
             "timeout" => throw new OperationCanceledException(ct),
+            "invalid-response" => throw new ApiRequestException("We couldn't read the response from List Hero. Please try again."),
             _ => Task.FromResult(new AppStatusResponse("List Hero", outcome))
         };
     }

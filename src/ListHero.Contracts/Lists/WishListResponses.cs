@@ -34,8 +34,8 @@ public sealed record OwnPurchaseMarkResponse(Guid Id, Guid ItemId, int Quantity,
     DateTimeOffset? UndoneAt, string RowVersion);
 
 public sealed record ListViewResponse(
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] OwnerWishListResponse? Owner,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ViewerWishListResponse? Viewer);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] OwnerWishListResponse? Owner = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ViewerWishListResponse? Viewer = null);
 
 public static class CapabilityHeaders
 {

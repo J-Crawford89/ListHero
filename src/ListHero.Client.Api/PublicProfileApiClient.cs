@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
 using ListHero.Client.Abstractions.Api;
 using ListHero.Contracts.Discovery;
 
@@ -20,8 +19,7 @@ public sealed class PublicProfileApiClient(HttpClient http, IApiAccessTokenProvi
         if (response.StatusCode == HttpStatusCode.Unauthorized) throw new SignInRequiredException();
         if (response.StatusCode == HttpStatusCode.Conflict)
         {
-            var problem = await response.Content.ReadFromJsonAsync<JsonElement>(ct);
-            if (problem.TryGetProperty("code", out var code) && code.GetString() == "handle_unavailable")
+            if (await ApiResponseReader.ReadProblemCodeAsync(response, ct) == "handle_unavailable")
                 throw new ApiRequestException("That handle is already taken. Choose another.");
             throw new ApiConflictException();
         }
@@ -29,7 +27,6 @@ public sealed class PublicProfileApiClient(HttpClient http, IApiAccessTokenProvi
             throw new ApiRequestException(response.StatusCode == HttpStatusCode.BadRequest
                 ? "Check your public name, handle and discovery confirmation. Handles cannot be changed after setup."
                 : "We couldn't load or save your public profile. Please try again.");
-        return await response.Content.ReadFromJsonAsync<OwnProfileResponse>(ct)
-            ?? throw new ApiRequestException("The API returned an empty response.");
+        return await ApiResponseReader.ReadRequiredAsync<OwnProfileResponse>(response, ct, writeMayHaveSucceeded: body is not null);
     }
 }

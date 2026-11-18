@@ -128,6 +128,7 @@ public sealed partial class WebHostTests
         await page.Locator("#edit-list-form input[type=checkbox]").CheckAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Save list", Exact = true }).ClickAsync();
         await Expect(page.Locator("#edit-list-form")).ToHaveCountAsync(0);
+        await VerifyInvalidPageRecoveryAsync(guestPage, page, origin);
         await guestPage.GotoAsync(origin + "/discover?tab=people&q=Browser&page=1");
         await Expect(guestPage.Locator(".person-card")).ToHaveCountAsync(1);
         await guestPage.Locator(".person-card").ClickAsync();
@@ -140,12 +141,16 @@ public sealed partial class WebHostTests
         await page.GotoAsync(guestPage.Url);
         await Expect(page).ToHaveURLAsync(listAddress);
         await Expect(page.Locator(".fulfillment")).ToHaveCountAsync(0);
+        var repeatedSearchAddress = origin + "/discover?tab=people&q=browser-jane&page=1";
+        await guestPage.GotoAsync(repeatedSearchAddress);
+        await Expect(guestPage.Locator(".person-card")).ToHaveCountAsync(1);
         await page.GetByRole(AriaRole.Button, new() { Name = "Edit list", Exact = true }).ClickAsync();
         await page.Locator("#edit-list-form input[type=checkbox]").UncheckAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Save list", Exact = true }).ClickAsync();
         await Expect(page.Locator("#edit-list-form")).ToHaveCountAsync(0);
-        await guestPage.GotoAsync(origin + "/discover?tab=people&q=browser-jane&page=1");
+        await guestPage.GetByRole(AriaRole.Button, new() { Name = "Search", Exact = true }).ClickAsync();
         await Expect(guestPage.GetByText("No people found.", new() { Exact = false })).ToBeVisibleAsync();
+        Assert.Equal(repeatedSearchAddress, guestPage.Url);
         await CaptureResponsiveReviewAsync(guestPage, "discovery");
         await page.GotoAsync(origin + "/dashboard");
         await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Your dashboard", Exact = true })).ToBeVisibleAsync();

@@ -40,11 +40,10 @@ public sealed class WishListApiClient(HttpClient http, IApiAccessTokenProvider t
         using var response = await http.SendAsync(request, cancellationToken);
         if (response.StatusCode == HttpStatusCode.Unauthorized) throw new SignInRequiredException();
         if (response.StatusCode == HttpStatusCode.Conflict) throw new ApiConflictException();
-        if (response.StatusCode == HttpStatusCode.NoContent) return default!;
+        if (response.StatusCode == HttpStatusCode.NoContent && typeof(T) == typeof(object)) return default!;
         if (response.StatusCode == HttpStatusCode.BadRequest && response.Content.Headers.ContentType?.MediaType == "application/problem+json")
         {
-            var problem = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(cancellationToken);
-            if (problem.TryGetProperty("code", out var code) && code.GetString() == "profile_required")
+            if (await ApiResponseReader.ReadProblemCodeAsync(response, cancellationToken) == "profile_required")
                 throw new ApiRequestException("Set up your public profile before making this list public. Use the Public profile link to choose your name and handle.");
         }
         if (!response.IsSuccessStatusCode)
@@ -55,7 +54,6 @@ public sealed class WishListApiClient(HttpClient http, IApiAccessTokenProvider t
                 HttpStatusCode.BadRequest => "Check the details and try again. Names are required, quantities must be positive, and links must start with http:// or https://.",
                 _ => "We couldn't save or load your list. Please try again."
             });
-        return await response.Content.ReadFromJsonAsync<T>(cancellationToken)
-            ?? throw new ApiRequestException("The API returned an empty response.");
+        return await ApiResponseReader.ReadRequiredAsync<T>(response, cancellationToken, writeMayHaveSucceeded: method != HttpMethod.Get);
     }
 }

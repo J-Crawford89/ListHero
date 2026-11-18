@@ -9,6 +9,16 @@ public abstract class DiscoveryPageBase : ComponentBase, IDisposable
     private bool disposed;
     protected bool IsBusy { get; private set; }
     protected string? Error { get; private set; }
+    protected bool RequiresSignIn { get; private set; }
+
+    protected void ResetLoad()
+    {
+        current?.Cancel();
+        current = null;
+        IsBusy = false;
+        Error = null;
+        RequiresSignIn = false;
+    }
 
     protected async Task LoadAsync<T>(Func<CancellationToken, Task<T>> read, Action<T> apply)
     {
@@ -16,17 +26,20 @@ public abstract class DiscoveryPageBase : ComponentBase, IDisposable
         current?.Cancel();
         var source = new CancellationTokenSource();
         current = source;
-        IsBusy = true; Error = null; StateHasChanged();
+        IsBusy = true; Error = null; RequiresSignIn = false; StateHasChanged();
         try
         {
             var result = await read(source.Token);
             if (!disposed && current == source && !source.IsCancellationRequested) apply(result);
         }
         catch (OperationCanceledException) when (source.IsCancellationRequested) { }
-        catch (Exception e) when (e is ApiRequestException or HttpRequestException or OperationCanceledException)
+        catch (Exception e) when (e is SignInRequiredException or ApiRequestException or HttpRequestException or OperationCanceledException)
         {
             if (!disposed && current == source)
-                Error = e is ApiRequestException ? e.Message : "We couldn't load discovery. Please try again.";
+            {
+                RequiresSignIn = e is SignInRequiredException;
+                Error = e is ApiRequestException or SignInRequiredException ? e.Message : "We couldn't load this page. Please try again.";
+            }
         }
         finally
         {
