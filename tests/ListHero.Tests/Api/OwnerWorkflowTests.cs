@@ -59,7 +59,7 @@ public sealed partial class OwnerWorkflowTests
             .Content.ReadFromJsonAsync<OwnerWishListResponse>();
         using var other = SignedInClient(factory);
         other.DefaultRequestHeaders.Add("X-Test-Role", "Admin");
-        Assert.Empty((await other.GetFromJsonAsync<WishListSummaryResponse[]>("/api/lists/mine"))!);
+        Assert.Empty((await other.GetFromJsonAsync<OwnedListPage>("/api/lists/mine"))!.Items);
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/lists/{created!.Id}/owner")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await other.PostAsJsonAsync($"/api/lists/{created.Id}/items",
             new CreateWishListItemRequest { Name = "Intrusion" })).StatusCode);
@@ -97,7 +97,7 @@ public sealed partial class OwnerWorkflowTests
         store.Items.Single().Value.Archive(DateTimeOffset.UtcNow);
         Assert.Empty((await owner.GetFromJsonAsync<OwnerWishListResponse>($"/api/lists/{list.Id}/owner"))!.Items);
         store.Lists[list.Id].Archive(DateTimeOffset.UtcNow);
-        Assert.Empty((await owner.GetFromJsonAsync<WishListSummaryResponse[]>("/api/lists/mine"))!);
+        Assert.Empty((await owner.GetFromJsonAsync<OwnedListPage>("/api/lists/mine"))!.Items);
         Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync($"/api/lists/{list.Id}/owner")).StatusCode);
         factory.Services.GetRequiredService<MemoryUserStore>().Users.Single().Value.Archive(DateTimeOffset.UtcNow);
         Assert.Equal(HttpStatusCode.Forbidden, (await owner.GetAsync("/api/lists/mine")).StatusCode);
@@ -125,7 +125,7 @@ public sealed partial class OwnerWorkflowTests
     {
         using var http = SignedInClient(factory);
         var api = new WishListApiClient(http, new TestTokenProvider());
-        Assert.Empty(await api.GetMineAsync());
+        Assert.Empty((await api.GetMineAsync()).Items);
         var created = await api.CreateAsync(new() { Name = "Birthday", Description = "A few favorite things" });
         Assert.False(created.IsPublic);
         await api.AddItemAsync(created.Id, new() { Name = "Mug", Description = "Green", DesiredQuantity = 2,
@@ -139,7 +139,7 @@ public sealed partial class OwnerWorkflowTests
         Assert.Equal(24.50, reopened.Items[1].ApproximateUnitPrice);
         Assert.Equal(2, reopened.Items[1].DesiredQuantity);
         Assert.Equal(3, reopened.Items[1].Priority);
-        Assert.Equal(created.Id, Assert.Single(await api.GetMineAsync()).Id);
+        Assert.Equal(created.Id, Assert.Single((await api.GetMineAsync()).Items).Id);
         var response = await http.GetAsync($"/api/lists/{created.Id}/owner");
         Assert.Contains("no-store", response.Headers.CacheControl!.ToString());
         var json = await response.Content.ReadAsStringAsync();
@@ -263,8 +263,13 @@ public sealed partial class OwnerWorkflowTests
         public ConcurrentDictionary<Guid, WishList> Lists { get; } = new();
         public ConcurrentDictionary<Guid, WishListItem> Items { get; } = new();
         public Func<Guid, bool> PurchaseExists { get; set; } = _ => false;
-        public Task<IReadOnlyList<WishList>> GetByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<WishList>>(Lists.Values.Where(list => list.OwnerId == ownerId && !list.IsArchived && HasActiveOwner(ownerId)).ToArray());
+        public Task<OwnedListPage> GetByOwnerAsync(Guid ownerId, int page, int pageSize, CancellationToken cancellationToken = default)
+        {
+            var rows = Lists.Values.Where(list => list.OwnerId == ownerId && !list.IsArchived && HasActiveOwner(ownerId))
+                .OrderByDescending(list => list.CreatedAt).ThenBy(list => list.Id).Skip((page - 1) * pageSize).Take(pageSize + 1)
+                .Select(list => new WishListSummaryResponse(list.Id, list.Name, list.Description, list.IsPublic, list.CreatedAt)).ToArray();
+            return Task.FromResult(new OwnedListPage(rows.Take(pageSize).ToArray(), page, pageSize, rows.Length > pageSize));
+        }
         public Task<IReadOnlyList<WishListSummaryResponse>> GetOwnerPreviewAsync(Guid ownerId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<WishListSummaryResponse>>(Lists.Values.Where(list => list.OwnerId == ownerId && !list.IsArchived && HasActiveOwner(ownerId))
                 .OrderByDescending(list => list.CreatedAt).ThenBy(list => list.Id).Take(5)

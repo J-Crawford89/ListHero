@@ -8,13 +8,13 @@ namespace ListHero.Application.Lists;
 public sealed class WishListService(IUserService users, IWishListStore store,
     IWishListReadService reads, TimeProvider clock) : IWishListService
 {
-    public async Task<IReadOnlyList<WishListSummaryResponse>> GetMineAsync(ExternalUserIdentity identity,
+    public async Task<OwnedListPage> GetMineAsync(ExternalUserIdentity identity, int page = 1, int pageSize = OwnedListPaging.DefaultPageSize,
         CancellationToken cancellationToken = default)
     {
+        if (page is < 1 or > OwnedListPaging.MaximumPage || pageSize is < 1 or > OwnedListPaging.MaximumPageSize)
+            throw new ArgumentException($"Choose a page from 1–{OwnedListPaging.MaximumPage} and a page size from 1–{OwnedListPaging.MaximumPageSize}.");
         var user = await users.ResolveAsync(identity, cancellationToken);
-        var lists = await store.GetByOwnerAsync(user.Id, cancellationToken);
-        return lists.Select(list => new WishListSummaryResponse(list.Id, list.Name,
-            list.Description, list.IsPublic, list.CreatedAt)).ToArray();
+        return await store.GetByOwnerAsync(user.Id, page, pageSize, cancellationToken);
     }
 
     public async Task<OwnerWishListResponse> CreateAsync(ExternalUserIdentity identity, CreateWishListRequest request,

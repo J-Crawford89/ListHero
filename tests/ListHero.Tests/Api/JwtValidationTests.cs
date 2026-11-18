@@ -41,7 +41,7 @@ public sealed partial class OwnerWorkflowTests
         other.DefaultRequestHeaders.Authorization = new("Bearer", factory.Token(Guid.NewGuid(), "valid"));
         var list = await JsonAsync<OwnerWishListResponse>(await owner.PostAsJsonAsync("/api/lists/", new CreateWishListRequest { Name = "Private" }));
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/lists/{list.Id}/owner")).StatusCode);
-        Assert.Empty((await other.GetFromJsonAsync<WishListSummaryResponse[]>("/api/lists/mine"))!);
+        Assert.Empty((await other.GetFromJsonAsync<OwnedListPage>("/api/lists/mine"))!.Items);
         Assert.Equal(HttpStatusCode.OK, (await owner.GetAsync($"/api/lists/{list.Id}/owner")).StatusCode);
     }
 

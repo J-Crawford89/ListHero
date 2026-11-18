@@ -5,7 +5,7 @@ namespace ListHero.Application.Lists;
 
 public interface IWishListService
 {
-    Task<IReadOnlyList<WishListSummaryResponse>> GetMineAsync(ExternalUserIdentity identity,
+    Task<OwnedListPage> GetMineAsync(ExternalUserIdentity identity, int page = 1, int pageSize = OwnedListPaging.DefaultPageSize,
         CancellationToken cancellationToken = default);
     Task<OwnerWishListResponse> CreateAsync(ExternalUserIdentity identity, CreateWishListRequest request,
         CancellationToken cancellationToken = default);

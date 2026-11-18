@@ -177,6 +177,7 @@ public sealed partial class WebHostTests
         await Expect(page).ToHaveURLAsync(origin + "/lists");
         await VerifyDraftNavigationAsync(browser, origin);
         await VerifyCrossTabSessionsAsync(browser, origin, api.Services);
+        await VerifyMyListsPaginationAsync(browser, origin, api.Services);
         Assert.Empty(errors);
     }
     private static async Task CaptureResponsiveReviewAsync(IPage page, string name)

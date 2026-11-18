@@ -13,6 +13,19 @@ namespace ListHero.Tests.Client;
 
 public sealed class HttpClientTests
 {
+    [Fact]
+    public async Task Owned_list_transport_sends_defaults_and_selected_paging_with_the_current_token()
+    {
+        var handler = new RecordingHandler(); using var http = new HttpClient(handler) { BaseAddress = new("https://example.test/root/") };
+        var api = new WishListApiClient(http, new CountingTokens());
+        handler.Response = JsonContent.Create(new OwnedListPage([], 1, 15, false));
+        Assert.Empty((await api.GetMineAsync()).Items);
+        AssertRequest(handler, HttpMethod.Get, "api/lists/mine?page=1&pageSize=15", "token-1");
+        handler.Response = JsonContent.Create(new OwnedListPage([new(ListId, "Mine", "", false, DateTimeOffset.UtcNow)], 2, 100, true));
+        var selected = await api.GetMineAsync(2, 100);
+        Assert.True(selected.HasMore); Assert.Equal(2, selected.Page); Assert.Equal(100, selected.PageSize); Assert.Single(selected.Items);
+        AssertRequest(handler, HttpMethod.Get, "api/lists/mine?page=2&pageSize=100", "token-2");
+    }
     private static readonly Guid ListId = Guid.NewGuid(), ItemId = Guid.NewGuid(), MarkId = Guid.NewGuid();
     private static readonly OwnerWishListResponse Owner = new(ListId, "Wishes", "", false, [], "AQAAAAAAAAA=");
 

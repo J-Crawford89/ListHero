@@ -8,9 +8,15 @@ namespace ListHero.Infrastructure.Persistence;
 
 public sealed class EfWishListStore(ListHeroDbContext db) : IWishListStore
 {
-    public async Task<IReadOnlyList<WishList>> GetByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default)
-        => await db.ListsWithActiveOwners().Where(list => list.OwnerId == ownerId)
-            .OrderByDescending(list => list.CreatedAt).ThenBy(list => list.Id).ToArrayAsync(cancellationToken);
+    public async Task<OwnedListPage> GetByOwnerAsync(Guid ownerId, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var rows = await db.ListsWithActiveOwners().Where(list => list.OwnerId == ownerId)
+            .OrderByDescending(list => list.CreatedAt).ThenBy(list => list.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize + 1)
+            .Select(list => new WishListSummaryResponse(list.Id, list.Name, list.Description, list.IsPublic, list.CreatedAt))
+            .ToArrayAsync(cancellationToken);
+        return new(rows.Take(pageSize).ToArray(), page, pageSize, rows.Length > pageSize);
+    }
 
     public async Task<IReadOnlyList<WishListSummaryResponse>> GetOwnerPreviewAsync(Guid ownerId, CancellationToken cancellationToken = default)
         => await db.ListsWithActiveOwners().Where(list => list.OwnerId == ownerId)

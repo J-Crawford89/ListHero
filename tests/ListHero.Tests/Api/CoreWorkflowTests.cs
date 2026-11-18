@@ -38,7 +38,7 @@ public sealed partial class OwnerWorkflowTests
             new ArchiveRequest { RowVersion = edited.Items[0].RowVersion }));
         Assert.Empty(withoutItem.Items);
         Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsJsonAsync($"/api/lists/{list.Id}/archive", new ArchiveRequest { RowVersion = withoutItem.RowVersion })).StatusCode);
-        Assert.Empty((await owner.GetFromJsonAsync<WishListSummaryResponse[]>("/api/lists/mine"))!);
+        Assert.Empty((await owner.GetFromJsonAsync<OwnedListPage>("/api/lists/mine"))!.Items);
         var records = factory.Services.GetRequiredService<MemoryListStore>();
         Assert.True(records.Lists[list.Id].IsArchived);
         Assert.True(records.Items[item.Id].IsArchived);

@@ -11,7 +11,8 @@ public static class WishListEndpoints
     {
         var group = endpoints.MapGroup("/api/lists").RequireAuthorization(AppRoles.User).WithTags("Wish lists");
         group.MapGet("/mine", async (HttpContext context, IWishListService service, CancellationToken cancellationToken)
-            => TypedResults.Ok(await service.GetMineAsync(context.User.ToExternalIdentity(), cancellationToken)))
+            => TypedResults.Ok(await service.GetMineAsync(context.User.ToExternalIdentity(),
+                PageValue(context.Request, "page", 1), PageValue(context.Request, "pageSize", OwnedListPaging.DefaultPageSize), cancellationToken)))
             .WithName("GetMyWishLists");
 
         group.MapPost("/", async (CreateWishListRequest request, HttpContext context,
@@ -48,5 +49,15 @@ public static class WishListEndpoints
             .AddEndpointFilter<RequestValidationFilter<ArchiveRequest>>();
         group.MapGet("/{listId:guid}/items/{itemId:guid}/edit-warning", async (Guid listId, Guid itemId, HttpContext context, IWishListService service, CancellationToken ct)
             => TypedResults.Ok(await service.EditWarningAsync(context.User.ToExternalIdentity(), listId, itemId, ct)));
+    }
+
+    private static int PageValue(HttpRequest request, string name, int fallback)
+    {
+        var values = request.Query[name];
+        if (values.Count == 0) return fallback;
+        if (values.Count != 1 || !int.TryParse(values[0], System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture, out var result))
+            throw new ArgumentException("Choose a valid page and page size.");
+        return result;
     }
 }

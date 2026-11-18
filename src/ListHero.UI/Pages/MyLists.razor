@@ -13,27 +13,7 @@
     <RequestFeedback Error="@Error" RequiresSignIn="RequiresSignIn" />
     <div class="workspace-grid">
         <div>
-            @if (lists is null)
-            {
-                <p aria-live="polite">@(IsBusy ? "Loading your lists…" : "Your lists could not be loaded.")</p>
-                @if (!IsBusy) { <button class="button-secondary" @onclick="LoadAsync">Try again</button> }
-            }
-            else if (lists.Count == 0)
-            {
-                <div class="empty-state"><img class="empty-mascot" src="_content/ListHero.UI/images/list-hero-mascot-final-v1.png" width="1024" height="1536" alt="" /><div><span class="panel-kicker">READY WHEN YOU ARE</span><h2>Your first wish starts here.</h2><p>Create a list for a birthday, a celebration, or just because.</p></div></div>
-            }
-            else
-            {
-                <div class="list-cards">
-                    @foreach (var list in lists)
-                    {
-                        <a class="list-card" href="@($"/lists/{list.Id}")" @key="list.Id">
-                            <span class="private-badge">@(list.IsPublic ? "Public" : "Private")</span>
-                            <h2>@list.Name</h2><p>@list.Description</p><span>Open list →</span>
-                        </a>
-                    }
-                </div>
-            }
+            <OwnedListBrowser Page="@Page" PageSize="@PageSize" />
         </div>
         <aside class="form-card">
             <span class="panel-kicker">THE NEXT ADVENTURE</span>
@@ -52,13 +32,9 @@
 </section>
 
 @code {
-    private IReadOnlyList<WishListSummaryResponse>? lists;
+    [Parameter, SupplyParameterFromQuery(Name = "page")] public string[]? Page { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "pageSize")] public string[]? PageSize { get; set; }
     private readonly CreateWishListRequest draft = new();
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender) await LoadAsync();
-    }
-    private Task LoadAsync() => RunAsync(async () => lists = await Api.GetMineAsync(Cancellation));
     private Task CreateAsync() => RunAsync(async () =>
     {
         var created = await Api.CreateAsync(draft, Cancellation);

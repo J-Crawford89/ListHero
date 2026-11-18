@@ -155,8 +155,14 @@ public sealed partial class OwnerPageTests
         public UpdateWishListItemRequest? UpdatedItem { get; private set; }
         public ArchiveRequest? ArchivedList { get; private set; }
         public ArchiveRequest? ArchivedItem { get; private set; }
-        public Task<IReadOnlyList<WishListSummaryResponse>> GetMineAsync(CancellationToken cancellationToken = default)
-            => RequiresSignIn ? throw new SignInRequiredException() : Task.FromResult<IReadOnlyList<WishListSummaryResponse>>([]);
+        public Func<int, int, CancellationToken, Task<OwnedListPage>>? ReadLists { get; set; }
+        public List<(int Page, int PageSize)> ListRequests { get; } = [];
+        public Task<OwnedListPage> GetMineAsync(int page = 1, int pageSize = OwnedListPaging.DefaultPageSize, CancellationToken cancellationToken = default)
+        {
+            ListRequests.Add((page, pageSize));
+            return RequiresSignIn ? throw new SignInRequiredException() : ReadLists?.Invoke(page, pageSize, cancellationToken)
+                ?? Task.FromResult(new OwnedListPage([], page, pageSize, false));
+        }
         public Task<OwnerWishListResponse> CreateAsync(CreateWishListRequest request, CancellationToken cancellationToken = default)
         {
             Created = request;

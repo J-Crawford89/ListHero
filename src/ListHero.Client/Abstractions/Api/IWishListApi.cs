@@ -4,7 +4,7 @@ namespace ListHero.Client.Abstractions.Api;
 
 public interface IWishListApi
 {
-    Task<IReadOnlyList<WishListSummaryResponse>> GetMineAsync(CancellationToken cancellationToken = default);
+    Task<OwnedListPage> GetMineAsync(int page = 1, int pageSize = OwnedListPaging.DefaultPageSize, CancellationToken cancellationToken = default);
     Task<OwnerWishListResponse> CreateAsync(CreateWishListRequest request, CancellationToken cancellationToken = default);
     Task<OwnerWishListResponse> GetOwnerViewAsync(Guid listId, CancellationToken cancellationToken = default);
     Task<OwnerWishListResponse> AddItemAsync(Guid listId, CreateWishListItemRequest request, CancellationToken cancellationToken = default);

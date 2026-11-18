@@ -35,7 +35,7 @@ public sealed partial class OwnerWorkflowTests
         Assert.Contains("[CreatedAt] DESC", commands.Sql);
         Assert.Contains("[Id]", commands.Sql);
         Assert.DoesNotContain("[RowVersion]", commands.Sql);
-        Assert.Equal(9, (await new EfWishListStore(db).GetByOwnerAsync(fixture.OwnerId)).Count);
+        Assert.Equal(9, (await new EfWishListStore(db).GetByOwnerAsync(fixture.OwnerId, 1, 15)).Items.Count);
     }
 
     [SqlServerFact]

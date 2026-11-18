@@ -30,6 +30,8 @@ ApiConnectionCheck (UI)
 
 The owner workflow uses `IWishListApi` in Client, `WishListApiClient` in Client.Api, and `IWishListService`/`WishListService` in Application. Infrastructure implements `IWishListStore` and `IUserStore` with EF Core. The shared forms call the transport capability directly; client orchestration services are added when there is actual client workflow logic to separate. Platform-specific delegated token acquisition is behind `IApiAccessTokenProvider`.
 
+My lists uses a bounded summary page throughout those interfaces, defaulting to 15 with a maximum of 100 per page. The reusable `OwnedListBrowser` handles collection reads separately from the creation form; dashboard previews keep their five-list limit. See [My lists pagination](my-lists-pagination.md).
+
 ## List access
 
 - Anyone may create an account through Entra External ID; an account is required to create/manage lists.

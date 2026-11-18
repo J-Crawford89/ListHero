@@ -1,0 +1,86 @@
+@inherits DiscoveryPageBase
+@inject IWishListApi Api
+@inject NavigationManager Navigation
+
+<div class="owned-list-browser">
+    @if (invalidQuery)
+    {
+        <div role="alert" class="request-error">
+            <p>Choose a page from 1–@OwnedListPaging.MaximumPage and 1–@OwnedListPaging.MaximumPageSize lists per page.</p>
+            <a href="/lists?page=1&pageSize=15">Go to page 1</a>
+        </div>
+    }
+    else
+    {
+        <label for="owned-page-size">Lists per page</label>
+        <select id="owned-page-size" value="@currentSize" @onchange="ChangeSize">
+            @if (!Sizes.Contains(currentSize)) { <option value="@currentSize">@currentSize</option> }
+            @foreach (var size in Sizes) { <option value="@size">@size</option> }
+        </select>
+    }
+    <RequestFeedback Error="@Error" RequiresSignIn="RequiresSignIn" Retry="Reload" />
+    @if (IsBusy) { <p role="status">Loading your lists…</p> }
+    else if (result is not null && Error is null)
+    {
+        @if (result.Items.Count == 0 && currentPage == 1)
+        {
+            <div class="empty-state"><img class="empty-mascot" src="_content/ListHero.UI/images/list-hero-mascot-final-v1.png" width="1024" height="1536" alt="" /><div><span class="panel-kicker">READY WHEN YOU ARE</span><h2>Your first wish starts here.</h2><p>Create a list for a birthday, a celebration, or just because.</p></div></div>
+        }
+        else if (result.Items.Count == 0)
+        {
+            <p>No lists on this page.</p><a href="@Link(1, currentSize)">Go to page 1</a>
+        }
+        else
+        {
+            <div class="list-cards">
+                @foreach (var list in result.Items)
+                {
+                    <a class="list-card" href="@($"/lists/{list.Id}")" @key="list.Id">
+                        <span class="private-badge">@(list.IsPublic ? "Public" : "Private")</span>
+                        <h2>@list.Name</h2><p>@list.Description</p><span>Open list →</span>
+                    </a>
+                }
+            </div>
+        }
+        @if (currentPage > 1 || result.HasMore)
+        {
+            <nav class="discovery-pagination" aria-label="My list pages">
+                @if (currentPage > 1) { <a href="@Link(currentPage - 1, currentSize)">← Previous</a> }
+                <span>Page @currentPage</span>
+                @if (result.HasMore && currentPage < OwnedListPaging.MaximumPage) { <a href="@Link(currentPage + 1, currentSize)">Next →</a> }
+            </nav>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public string[]? Page { get; set; }
+    [Parameter] public string[]? PageSize { get; set; }
+    private static readonly int[] Sizes = [15, 30, 50, 100];
+    private int currentPage, currentSize;
+    private bool pending, invalidQuery;
+    private OwnedListPage? result;
+    protected override void OnParametersSet()
+    {
+        var validPage = PageQuery.TryParse(Page, OwnedListPaging.MaximumPage, out var page);
+        var validSize = PageQuery.TryParse(PageSize, OwnedListPaging.MaximumPageSize, out var size);
+        if (PageSize is null or { Length: 0 }) size = OwnedListPaging.DefaultPageSize;
+        var invalid = !validPage || !validSize;
+        if (page == currentPage && size == currentSize && invalid == invalidQuery) return;
+        ResetLoad();
+        currentPage = page; currentSize = size; invalidQuery = invalid;
+        result = null; pending = !invalidQuery;
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (pending) { pending = false; await Reload(); }
+    }
+    private Task Reload() => invalidQuery ? Task.CompletedTask
+        : LoadAsync(ct => Api.GetMineAsync(currentPage, currentSize, ct), value => result = value);
+    private void ChangeSize(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var size) && size is >= 1 and <= OwnedListPaging.MaximumPageSize)
+            Navigation.NavigateTo(Link(1, size));
+    }
+    private static string Link(int page, int size) => $"/lists?page={page}&pageSize={size}";
+}

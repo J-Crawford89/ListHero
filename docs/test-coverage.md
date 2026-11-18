@@ -1,6 +1,6 @@
 # Test coverage
 
-Updated 2026-11-18 after the archived-account batch. The suite contains 420 cases. The full run includes every case; the default run skips environment-dependent SQL and browser checks. See the [quality review follow-ups](quality-review-2026-11-18.md) for changes since the original dashboard baseline.
+Updated 2026-11-18 after the My lists pagination batch. The suite contains 450 cases. The full run includes every case; the default run skips environment-dependent SQL and browser checks. See the [quality review follow-ups](quality-review-2026-11-18.md) for changes since the original dashboard baseline.
 
 ## Measured result
 
@@ -9,22 +9,24 @@ The full Release suite passes with no skipped tests. The Release build has zero 
 | Assembly | Executable lines | Branches |
 | --- | ---: | ---: |
 | ListHero.Domain | 100.0% | 93.4% |
-| ListHero.Application | 98.9% | 93.3% |
+| ListHero.Application | 98.9% | 93.6% |
 | ListHero.Infrastructure | 98.1% | 90.5% |
-| ListHero.Api | 97.3% | 83.0% |
+| ListHero.Api | 97.3% | 83.5% |
 | ListHero.Contracts | 96.8% | 100.0% |
 | ListHero.Client | 97.8% | 100.0% |
 | ListHero.Client.Api | 100.0% | 96.4% |
-| ListHero.UI | 97.5% | 91.7% |
+| ListHero.UI | 97.6% | 92.2% |
 | ListHero.Web | 92.6% | 78.2% |
 
-Aggregate: 2596/2666 executable lines and 1695/1896 branches. All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
+Aggregate: 2636/2706 executable lines and 1756/1958 branches. All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
 
-Latest local evidence: `.artifacts/qol-archived-owner-final/coverage.trx` and `.artifacts/qol-archived-owner-final/cc25754e-7960-4c60-9e27-c9e7c74cb084/coverage.cobertura.xml`. Both are Git-ignored.
+Latest local evidence: `.artifacts/qol-pagination-complete/coverage.trx` and `.artifacts/qol-pagination-complete/693e9319-982f-43c6-af70-c13b00db6e94/coverage.cobertura.xml`. Both are Git-ignored.
 
 The original audit had 50 passing cases, low client HTTP coverage, no Web host measurement, and no continuous SQL/coverage enforcement. Its unfiltered totals included generated code, so its aggregate percentage should not be compared directly with this consistently filtered baseline.
 
 ## Gaps closed
+
+- **My lists pagination:** default and configurable page sizes, malformed/duplicate/bound checks before provisioning, stable SQL ordering and projection, bounded overfetch, exact last pages, cross-owner/archived isolation, and empty later pages. UI tests verify stale-read cancellation, retry and unchanged-parameter behavior. A real browser exercises selector sizes, Previous/Next, Back/Forward, reload, and invalid-page recovery. See [My lists pagination](my-lists-pagination.md).
 
 - **Archived owners:** SQL/API regressions disable an owner after creating public/private lists, valid share/guest credentials, purchases, and saved grants. They verify access denial, hidden titles in saved/pinned results, blocked purchase retries/undo, intact history, unavailable owner reads, continued access for other active owners, and shortcut removal. UI/transport checks clear stale viewer content on 403/404 without clearing a newly navigated list or treating temporary server failures as access loss. See [archived-account policy](archived-accounts.md).
 

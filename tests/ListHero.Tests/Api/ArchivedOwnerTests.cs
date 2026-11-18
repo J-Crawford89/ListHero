@@ -147,7 +147,7 @@ public sealed partial class OwnerWorkflowTests
         {
             var db = scope.ServiceProvider.GetRequiredService<ListHeroDbContext>();
             var lists = new EfWishListStore(db);
-            Assert.Empty(await lists.GetByOwnerAsync(ownerId));
+            Assert.Empty((await lists.GetByOwnerAsync(ownerId, 1, 15)).Items);
             Assert.Empty(await lists.GetOwnerPreviewAsync(ownerId));
             Assert.Null(await lists.GetOwnedAsync(privateList.Id, ownerId));
             Assert.Null(await new EfCollaborationStore(db).GetActiveListAsync(publicList.Id));

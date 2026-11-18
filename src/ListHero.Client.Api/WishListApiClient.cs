@@ -9,8 +9,8 @@ namespace ListHero.Client.Api;
 // Token acquisition happens in the caller's scope, never in a pooled HTTP handler.
 public sealed class WishListApiClient(HttpClient http, IApiAccessTokenProvider tokens) : IWishListApi
 {
-    public Task<IReadOnlyList<WishListSummaryResponse>> GetMineAsync(CancellationToken cancellationToken = default)
-        => SendAsync<IReadOnlyList<WishListSummaryResponse>>(HttpMethod.Get, "api/lists/mine", null, cancellationToken);
+    public Task<OwnedListPage> GetMineAsync(int page = 1, int pageSize = OwnedListPaging.DefaultPageSize, CancellationToken cancellationToken = default)
+        => SendAsync<OwnedListPage>(HttpMethod.Get, $"api/lists/mine?page={page}&pageSize={pageSize}", null, cancellationToken);
 
     public Task<OwnerWishListResponse> CreateAsync(CreateWishListRequest request, CancellationToken cancellationToken = default)
         => SendAsync<OwnerWishListResponse>(HttpMethod.Post, "api/lists/", request, cancellationToken);
