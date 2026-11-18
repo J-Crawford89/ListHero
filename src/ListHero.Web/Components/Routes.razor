@@ -1,4 +1,5 @@
 @using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Navigation
 
 <Router AppAssembly="typeof(Program).Assembly"
         AdditionalAssemblies="new[] { typeof(ListHero.UI.Pages.Home).Assembly }"
@@ -7,6 +8,7 @@
         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(ListHero.UI.Layout.MainLayout)">
             <NotAuthorized>
                 <p>You need to sign in to view this page.</p>
+                <a href="/sign-in" data-enhance-nav="false">Sign in to continue</a>
             </NotAuthorized>
         </AuthorizeRouteView>
         <FocusOnNavigate RouteData="routeData" Selector="h1" />

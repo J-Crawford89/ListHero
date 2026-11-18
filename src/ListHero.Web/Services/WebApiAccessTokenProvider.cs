@@ -13,6 +13,8 @@ public sealed class WebApiAccessTokenProvider(AuthenticationStateProvider authen
     {
         var user = (await authentication.GetAuthenticationStateAsync()).User;
         if (user.Identity?.IsAuthenticated != true) throw new SignInRequiredException();
+        if (long.TryParse(user.FindFirst(SessionPolicy.Started)?.Value, out var started)
+            && DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(started) >= TimeSpan.FromDays(90)) throw new SignInRequiredException();
         var scopes = configuration.GetSection("ListHeroApi:Scopes").Get<string[]>()
             ?? throw new InvalidOperationException("ListHeroApi:Scopes is required.");
         try

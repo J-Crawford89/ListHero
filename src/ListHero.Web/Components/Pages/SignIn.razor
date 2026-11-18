@@ -1,0 +1,17 @@
+@page "/sign-in"
+@using ListHero.Web.Services
+<PageTitle>Sign in — List Hero</PageTitle>
+<section class="content-page"><h1>Welcome back, hero</h1>
+    <form action="/account/sign-in" method="get" data-enhance="false" class="form-card">
+        <input type="hidden" name="returnUrl" value="@SessionPolicy.SafeReturn(ReturnUrl)" />
+        @if (ListId is not null) { <input type="hidden" name="listId" value="@ListId" /> }
+        <label for="remember-device">Sign-in duration</label>
+        <select id="remember-device" name="rememberMe"><option value="true">Remember this device</option><option value="false">This browser session only</option></select>
+        <p>Choose browser session only on a shared computer. Your identity provider may still require authentication.</p>
+        <button class="button-primary" type="submit">Continue to sign in</button>
+    </form>
+</section>
+@code {
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery] public Guid? ListId { get; set; }
+}

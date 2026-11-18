@@ -67,6 +67,21 @@ public sealed partial class WebHostTests
         await CaptureResponsiveReviewAsync(page, "owner-list");
         Assert.StartsWith(origin + "/view/", shareAddress);
         Assert.Contains('#', shareAddress);
+        await using (var returning = await browser.NewContextAsync(new() { IgnoreHTTPSErrors = true }))
+        {
+            var returningPage = await returning.NewPageAsync();
+            await returningPage.GotoAsync(shareAddress);
+            await Expect(returningPage.Locator(".wish-card h2")).ToHaveTextAsync("Blue mug");
+            await returningPage.GetByRole(AriaRole.Link, new() { Name = "Sign in", Exact = true }).First.ClickAsync();
+            await Expect(returningPage.Locator("h1")).ToHaveTextAsync("Welcome back, hero");
+            Assert.DoesNotContain(shareAddress.Split('#')[1], returningPage.Url);
+            var pending = Assert.Single(await returning.CookiesAsync(), c => c.Name == "ListHero.PendingReturn");
+            Assert.True(pending.HttpOnly); Assert.DoesNotContain(shareAddress.Split('#')[1], pending.Value);
+            await returning.APIRequest.GetAsync(origin + "/test/session");
+            await returningPage.GotoAsync(origin + "/account/resume");
+            await Expect(returningPage).ToHaveURLAsync(shareAddress);
+            await Expect(returningPage.Locator(".wish-card h2")).ToHaveTextAsync("Blue mug");
+        }
         await guestPage.GotoAsync(shareAddress);
         await Expect(guestPage.Locator(".mark-form")).ToHaveCountAsync(1);
         await guestPage.Locator(".mark-form input[type=number]").FillAsync("3");

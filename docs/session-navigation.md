@@ -1,0 +1,15 @@
+# Session persistence and navigation
+
+This first QoL batch adds explicit remembered sessions and safe landing/recovery navigation. It does not change Entra's tenant policies or API access-token validity.
+
+- `/` temporarily redirects an authenticated browser to `/dashboard`. Anonymous visitors see the marketing page. `/welcome` always offers marketing, linked in the footer.
+- `/sign-in` lets the user choose **Remember this device** or **This browser session only**. Successful OIDC challenges carry that choice into the app cookie. Existing sessions need a new sign-in to adopt browser persistence.
+- App tickets use 30-day sliding expiry with a separately enforced 90-day absolute age. API acquisition also rejects a circuit past that absolute age. Absolute age is preserved across cookie renewal. Legacy tickets use their original issue time, not the deployment date.
+- Hosted MSAL cache retention is explicitly 30 days and remains encrypted. Local development's memory cache still does not survive app restarts. Cache retention does not extend access-token validity or prevent Entra from requiring interaction.
+- Active visible browser activity checks the app session at most once per five minutes through an antiforgery-protected POST. Hidden or unattended pages do not generate renewal traffic. Changes of login session or expired/invalid antiforgery context cause a full-page refresh, with a warning if a form has been edited. This is bounded browser-state synchronization, not immediate distributed token revocation.
+- Sign-in recovery captures an allowlisted local destination through a same-origin antiforgery POST. Private share fragments are kept in a Secure, HttpOnly, ten-minute Data Protection cookie; they are not copied into query strings. A protected resume endpoint consumes the return cookie once, and logout clears it. List access still validates the share link at use time.
+- Recovery warns that form changes will not be restored. Automatic protected draft persistence and fine-grained dirty-form tracking remain future work. The warning is conservative and can still appear after a form has been saved.
+
+Tests cover actual persistent versus session-cookie headers, challenge destinations and persistence, local-route rejection, root/marketing behavior, antiforgery, encrypted one-time private return context, absolute expiry, and existing SQL/browser workflows. A real Entra sign-in after deployment is still the acceptance check for provider-specific policies; no automated test proves weeks of real browser retention.
+
+No schema migration is required. No token or cookie values are logged by this feature. The remaining review items (save/pin separation, profile conflicts, query bounds, visibility-aware viewer polling, and broader UX review) are separate batches.

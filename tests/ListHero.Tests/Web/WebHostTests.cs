@@ -38,6 +38,7 @@ public sealed partial class WebHostTests
         var options = factory.Services.GetRequiredService<IOptionsMonitor<OpenIdConnectOptions>>().Get(OpenIdConnectDefaults.AuthenticationScheme);
         var properties = options.StateDataFormat.Unprotect(query["state"]!);
         Assert.NotNull(properties);
+        Assert.False(properties.IsPersistent);
         Assert.Equal(sharedList ? $"/view/{id}" : "/dashboard", properties.RedirectUri);
         Assert.Equal("https://localhost/signin-oidc", query["redirect_uri"].ToString());
     }
@@ -142,7 +143,7 @@ public sealed partial class WebHostTests
                 if (context.Request.Path == "/test/session")
                 {
                     var principal = new ClaimsPrincipal(new ClaimsIdentity([new("oid", Guid.NewGuid().ToString()), new("name", "Test owner")], CookieAuthenticationDefaults.AuthenticationScheme));
-                    var properties = new AuthenticationProperties();
+                    var properties = new AuthenticationProperties { IsPersistent = context.Request.Query["persistent"] == "true" };
                     properties.Items[".AuthScheme"] = OpenIdConnectDefaults.AuthenticationScheme;
                     await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, properties);
                     context.Response.StatusCode = 204;
