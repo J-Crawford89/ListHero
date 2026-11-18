@@ -9,7 +9,7 @@ namespace ListHero.Infrastructure.Persistence;
 public sealed class EfCollaborationStore(ListHeroDbContext db) : IListViewerStore, IShareLinkStore, IPurchaseStore
 {
     public Task<WishList?> GetActiveListAsync(Guid listId, CancellationToken ct = default)
-        => db.WishLists.AsNoTracking().SingleOrDefaultAsync(list => list.Id == listId && list.ArchivedAt == null, ct);
+        => db.ListsWithActiveOwners().SingleOrDefaultAsync(list => list.Id == listId, ct);
     public Task<ListShareLink?> GetShareByHashAsync(string hash, CancellationToken ct = default)
         => db.ListShareLinks.AsNoTracking().SingleOrDefaultAsync(link => link.TokenHash == hash && link.ArchivedAt == null, ct);
     public Task<GuestIdentity?> GetGuestByHashAsync(string hash, CancellationToken ct = default)

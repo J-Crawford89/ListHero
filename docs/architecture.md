@@ -41,6 +41,7 @@ The owner workflow uses `IWishListApi` in Client, `WishListApiClient` in Client.
 - Authenticated owner identity takes precedence over a share link. The owner sees the owner view and cannot mark purchases in v1.
 - Admin is a placeholder operational role. It does not override ownership or share access.
 - Archived lists are excluded from ordinary access.
+- Archiving a user disables access to every list they own, including public/shared/saved access and purchase actions. Saved references become generic unavailable entries; business history remains intact. See [archived-account policy](archived-accounts.md).
 
 `ListAccessResolver` matches presented credentials to stored hashes before calling `ListAccessService`. Internal user IDs come from validated external identities; guest IDs come from validated guest credentials. Revocation and expiration are checked for each view, guest issuance, mark, and undo operation. Invalid bearer tokens never silently become anonymous requests.
 

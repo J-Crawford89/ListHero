@@ -128,6 +128,7 @@ public sealed class HttpClientTests
         if (status == 401) Assert.IsType<SignInRequiredException>(exception);
         else if (status == 409 && owner) Assert.IsType<ApiConflictException>(exception);
         else Assert.IsType<ApiRequestException>(exception);
+        if (!owner && status is not (401 or 409)) Assert.Equal((HttpStatusCode)status, ((ApiRequestException)exception).StatusCode);
         Assert.DoesNotContain("secret-server-stack", exception.Message);
         Assert.False(string.IsNullOrWhiteSpace(exception.Message));
     }

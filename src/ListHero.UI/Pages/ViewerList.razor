@@ -99,7 +99,24 @@
         if (needsLoad && !IsBusy) { needsLoad = false; await LoadAsync(); }
         if (firstRender) await StartPollingAsync();
     }
-    private Task LoadAsync() => RunAsync(LoadCoreAsync);
+    private Task LoadAsync() => RunListAsync(LoadCoreAsync);
+    private Task RunListAsync(Func<Task> action)
+    {
+        var id = ListId;
+        var location = Navigation.Uri;
+        return RunAsync(async () =>
+        {
+            try { await action(); }
+            catch (ApiRequestException exception) when (exception.StatusCode is System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.NotFound)
+            {
+                if (id == ListId && location == Navigation.Uri && !IsDisposed)
+                {
+                    list = null; notice = null; drafts.Clear();
+                }
+                throw;
+            }
+        });
+    }
     private async Task LoadCoreAsync()
     {
         var id = ListId;
@@ -120,7 +137,7 @@
         if (!drafts.TryGetValue(itemId, out var value)) drafts[itemId] = value = new();
         return value;
     }
-    private Task MarkAsync(Guid itemId) => RunAsync(async () =>
+    private Task MarkAsync(Guid itemId) => RunListAsync(async () =>
     {
         var id = ListId;
         var location = Navigation.Uri;
@@ -132,7 +149,7 @@
         notice = marked.UndoneAt.HasValue ? "This earlier mark was already undone." : $"You marked {marked.Quantity}. Thank you for helping coordinate gifts.";
         await LoadCoreAsync();
     });
-    private Task UndoAsync(OwnPurchaseMarkResponse mark) => RunAsync(async () =>
+    private Task UndoAsync(OwnPurchaseMarkResponse mark) => RunListAsync(async () =>
     {
         var id = ListId;
         var location = Navigation.Uri;

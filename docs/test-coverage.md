@@ -1,6 +1,6 @@
 # Test coverage
 
-Updated 2026-11-18 after the retention/recovery batch. The suite contains 409 cases. The full run includes every case; the default run skips environment-dependent SQL and browser checks. See the [quality review follow-ups](quality-review-2026-11-18.md) for changes since the original dashboard baseline.
+Updated 2026-11-18 after the archived-account batch. The suite contains 420 cases. The full run includes every case; the default run skips environment-dependent SQL and browser checks. See the [quality review follow-ups](quality-review-2026-11-18.md) for changes since the original dashboard baseline.
 
 ## Measured result
 
@@ -13,18 +13,20 @@ The full Release suite passes with no skipped tests. The Release build has zero 
 | ListHero.Infrastructure | 98.1% | 90.5% |
 | ListHero.Api | 97.3% | 83.0% |
 | ListHero.Contracts | 96.8% | 100.0% |
-| ListHero.Client | 97.7% | 100.0% |
+| ListHero.Client | 97.8% | 100.0% |
 | ListHero.Client.Api | 100.0% | 96.4% |
-| ListHero.UI | 97.4% | 91.6% |
+| ListHero.UI | 97.5% | 91.7% |
 | ListHero.Web | 92.6% | 78.2% |
 
-Aggregate: 2579/2649 executable lines and 1689/1890 branches. All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
+Aggregate: 2596/2666 executable lines and 1695/1896 branches. All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
 
-Latest local evidence: `.artifacts/qol-retention-complete/coverage.trx` and `.artifacts/qol-retention-complete/a46558ff-d4cd-4622-8732-f37d8bbc19ad/coverage.cobertura.xml`. Both are Git-ignored.
+Latest local evidence: `.artifacts/qol-archived-owner-final/coverage.trx` and `.artifacts/qol-archived-owner-final/cc25754e-7960-4c60-9e27-c9e7c74cb084/coverage.cobertura.xml`. Both are Git-ignored.
 
 The original audit had 50 passing cases, low client HTTP coverage, no Web host measurement, and no continuous SQL/coverage enforcement. Its unfiltered totals included generated code, so its aggregate percentage should not be compared directly with this consistently filtered baseline.
 
 ## Gaps closed
+
+- **Archived owners:** SQL/API regressions disable an owner after creating public/private lists, valid share/guest credentials, purchases, and saved grants. They verify access denial, hidden titles in saved/pinned results, blocked purchase retries/undo, intact history, unavailable owner reads, continued access for other active owners, and shortcut removal. UI/transport checks clear stale viewer content on 403/404 without clearing a newly navigated list or treating temporary server failures as access loss. See [archived-account policy](archived-accounts.md).
 
 - **Retention and recovery:** preview/apply cache isolation, retained guest/archived history, exact-name/ownership/age/activity guards on local database cleanup, safe command failures, encrypted key/certificate portability, revocation preservation, wrong-password/tamper/application failures, and authenticated malicious bundle rejection. A native synthetic LocalDB backup is restored to a separate database and checked for integrity, exact entity data/history, recovered share tokens, original guest ownership, cookie protection, and a protected cache probe. No live Azure restore, real MSAL refresh, or recovery-time guarantee is implied. See [retention and recovery](retention-and-restore.md).
 

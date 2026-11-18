@@ -18,6 +18,7 @@ public interface IListAccessResolver
 }
 public interface IListViewerStore
 {
+    // A list is accessible only while both the list and its owner are active.
     Task<WishList?> GetActiveListAsync(Guid listId, CancellationToken ct = default);
     Task<ListShareLink?> GetShareByHashAsync(string hash, CancellationToken ct = default);
     Task<GuestIdentity?> GetGuestByHashAsync(string hash, CancellationToken ct = default);

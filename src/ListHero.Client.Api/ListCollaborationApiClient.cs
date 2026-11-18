@@ -44,7 +44,7 @@ public sealed class ListCollaborationApiClient(HttpClient http, IApiAccessTokenP
                 HttpStatusCode.Forbidden => "This action is unavailable. Sign in or use an active share link to mark gifts.",
                 HttpStatusCode.BadRequest => "Check the quantity or expiration date and try again.",
                 _ => "We couldn't complete that request. Please try again."
-            });
+            }, response.StatusCode);
         if (response.StatusCode == HttpStatusCode.NoContent && typeof(T) == typeof(object)) return default!;
         return await ApiResponseReader.ReadRequiredAsync<T>(response, ct, writeMayHaveSucceeded: method != HttpMethod.Get);
     }

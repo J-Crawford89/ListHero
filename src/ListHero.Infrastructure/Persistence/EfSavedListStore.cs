@@ -43,7 +43,7 @@ public sealed class EfSavedListStore(ListHeroDbContext db) : ISavedListStore
             join list in db.WishLists.AsNoTracking() on entry.WishListId equals list.Id
             where entry.UserId == userId && entry.ArchivedAt == null && (!pinnedOnly || entry.IsPinned)
             orderby entry.CreatedAt descending, entry.Id
-            select new { entry, list, Available = list.ArchivedAt == null && (list.OwnerId == userId || list.IsPublic
+            select new { entry, list, Available = db.ListsWithActiveOwners().Any(active => active.Id == list.Id) && (list.OwnerId == userId || list.IsPublic
                 || db.ListShareLinks.Any(link => link.Id == entry.ShareLinkId && link.WishListId == list.Id
                     && link.ArchivedAt == null && link.RevokedAt == null && (link.ExpiresAt == null || link.ExpiresAt > now))) })
             .Skip((page - 1) * 20).Take(21).ToArrayAsync(ct);

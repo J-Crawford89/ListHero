@@ -5,6 +5,7 @@ namespace ListHero.Application.Lists;
 
 public interface IWishListStore
 {
+    // Owner list reads exclude archived lists and lists belonging to an archived account.
     Task<IReadOnlyList<WishList>> GetByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<WishListSummaryResponse>> GetOwnerPreviewAsync(Guid ownerId, CancellationToken cancellationToken = default);
     Task<WishList?> GetOwnedAsync(Guid listId, Guid ownerId, CancellationToken cancellationToken = default);

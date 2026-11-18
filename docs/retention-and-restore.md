@@ -13,7 +13,7 @@ Implemented locally November 18, 2026. These are operator commands, not HTTP end
 | Local isolated SQL test databases | At least 14 days old, exact generated name, explicit test-ownership marker, and no connected sessions. Apply requires one exact target. Never force disconnects. |
 | Data Protection keys and revocation records | Retain all, together with certificates/private keys needed to decrypt them. Expired keys can still be required to decrypt old payloads. Never purge keys based on age. |
 
-An archived-owner access policy and any future permanent erasure feature require a separate product/security decision. These commands do not introduce permanent user-data deletion.
+The [archived-account policy](archived-accounts.md) disables list access while retaining the data. Any future permanent erasure feature requires a separate product/security decision. These commands do not introduce permanent user-data deletion.
 
 ## Build and invocation
 

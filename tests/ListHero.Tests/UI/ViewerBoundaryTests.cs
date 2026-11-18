@@ -10,6 +10,69 @@ namespace ListHero.Tests.UI;
 
 public sealed partial class ViewerPageTests
 {
+    [Fact]
+    public async Task A_temporary_server_failure_keeps_loaded_content_for_retry()
+    {
+        using var context = ViewerContext(out var fake, out var polling);
+        var page = context.Render<ViewerList>(p => p.Add(c => c.ListId, fake.ListId));
+        page.WaitForAssertion(() => Assert.Single(page.FindAll(".mark-form")));
+        fake.ReadError = new ListHero.Client.Abstractions.Api.ApiRequestException("Please try again.", System.Net.HttpStatusCode.ServiceUnavailable);
+        await polling.RefreshAsync();
+        page.WaitForAssertion(() =>
+        {
+            Assert.Single(page.FindAll(".mark-form"));
+            Assert.Equal("Birthday", page.Find("h1").TextContent);
+            Assert.Contains("try again", page.Find("[role=alert]").TextContent);
+        });
+    }
+
+    [Fact]
+    public void A_late_denial_from_a_previous_route_cannot_clear_the_new_list()
+    {
+        using var context = ViewerContext(out var fake, out _);
+        var old = fake.ListId; var next = Guid.NewGuid();
+        var pending = new TaskCompletionSource<ListViewResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+        fake.Read = (id, _) => id == old ? pending.Task : Task.FromResult(new ListViewResponse(null, new(next, "New list", "", true, false, [], [])));
+        var nav = context.Services.GetRequiredService<NavigationManager>();
+        nav.NavigateTo($"/view/{old}");
+        var page = context.Render<ViewerList>(p => p.Add(c => c.ListId, old));
+        page.WaitForAssertion(() => Assert.Equal(1, fake.Loads));
+        nav.NavigateTo($"/view/{next}");
+        page.Render(p => p.Add(c => c.ListId, next));
+        pending.SetException(new ListHero.Client.Abstractions.Api.ApiRequestException("Unavailable.", System.Net.HttpStatusCode.NotFound));
+        page.WaitForAssertion(() => Assert.Equal("New list", page.Find("h1").TextContent));
+    }
+
+    [Theory]
+    [InlineData(403, "refresh")] [InlineData(404, "refresh")]
+    [InlineData(403, "mark")] [InlineData(404, "mark")]
+    [InlineData(403, "undo")] [InlineData(404, "undo")]
+    public async Task Definitive_access_denial_clears_previously_loaded_content_and_purchase_actions(int status, string operation)
+    {
+        using var context = ViewerContext(out var fake, out var polling);
+        if (operation == "undo") fake.mark = new(Guid.NewGuid(), fake.ItemId, 1, DateTimeOffset.UtcNow, null, "AQAAAAAAAAA=");
+        var page = context.Render<ViewerList>(p => p.Add(c => c.ListId, fake.ListId));
+        page.WaitForAssertion(() => Assert.Single(page.FindAll(".mark-form")));
+        var error = new ListHero.Client.Abstractions.Api.ApiRequestException("This list is unavailable.", (System.Net.HttpStatusCode)status);
+        if (operation == "refresh") { fake.ReadError = error; await polling.RefreshAsync(); }
+        else
+        {
+            fake.WriteError = error;
+            if (operation == "mark") page.Find(".mark-form").Submit();
+            else page.Find(".own-mark button").Click();
+        }
+        page.WaitForAssertion(() =>
+        {
+            Assert.Contains("unavailable", page.Find("[role=alert]").TextContent);
+            Assert.Equal("Wish list", page.Find("h1").TextContent);
+            Assert.Empty(page.FindAll(".wish-card, .mark-form, .own-mark"));
+            Assert.DoesNotContain("Birthday", page.Markup);
+        });
+        fake.ReadError = null; fake.WriteError = null;
+        page.FindAll("button").Single(button => button.TextContent == "Try again").Click();
+        page.WaitForAssertion(() => Assert.Single(page.FindAll(".mark-form")));
+    }
+
     [Theory]
     [InlineData("%0D%0Ainjected")] [InlineData("bad%20token")]
     [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]

@@ -25,5 +25,8 @@ public sealed class SignInRequiredException : Exception
     public SignInRequiredException() : base("Please sign in again to continue.") { }
 }
 
-public class ApiRequestException(string message) : Exception(message);
+public class ApiRequestException(string message, System.Net.HttpStatusCode? statusCode = null) : Exception(message)
+{
+    public System.Net.HttpStatusCode? StatusCode { get; } = statusCode;
+}
 public sealed class ApiConflictException() : ApiRequestException("This record changed. Reload the list before trying again. Your unsaved changes are still in the form.");

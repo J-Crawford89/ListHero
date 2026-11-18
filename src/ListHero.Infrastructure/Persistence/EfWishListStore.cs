@@ -9,18 +9,18 @@ namespace ListHero.Infrastructure.Persistence;
 public sealed class EfWishListStore(ListHeroDbContext db) : IWishListStore
 {
     public async Task<IReadOnlyList<WishList>> GetByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default)
-        => await db.WishLists.AsNoTracking().Where(list => list.OwnerId == ownerId && list.ArchivedAt == null)
+        => await db.ListsWithActiveOwners().Where(list => list.OwnerId == ownerId)
             .OrderByDescending(list => list.CreatedAt).ThenBy(list => list.Id).ToArrayAsync(cancellationToken);
 
     public async Task<IReadOnlyList<WishListSummaryResponse>> GetOwnerPreviewAsync(Guid ownerId, CancellationToken cancellationToken = default)
-        => await db.WishLists.AsNoTracking().Where(list => list.OwnerId == ownerId && list.ArchivedAt == null)
+        => await db.ListsWithActiveOwners().Where(list => list.OwnerId == ownerId)
             .OrderByDescending(list => list.CreatedAt).ThenBy(list => list.Id).Take(5)
             .Select(list => new WishListSummaryResponse(list.Id, list.Name, list.Description, list.IsPublic, list.CreatedAt))
             .ToArrayAsync(cancellationToken);
 
     public Task<WishList?> GetOwnedAsync(Guid listId, Guid ownerId, CancellationToken cancellationToken = default)
-        => db.WishLists.AsNoTracking().SingleOrDefaultAsync(list => list.Id == listId
-            && list.OwnerId == ownerId && list.ArchivedAt == null, cancellationToken);
+        => db.ListsWithActiveOwners().SingleOrDefaultAsync(list => list.Id == listId
+            && list.OwnerId == ownerId, cancellationToken);
 
     public async Task<IReadOnlyList<WishListItem>> GetItemsAsync(Guid listId, CancellationToken cancellationToken = default)
         => await db.WishListItems.AsNoTracking().Where(item => item.WishListId == listId && item.ArchivedAt == null)

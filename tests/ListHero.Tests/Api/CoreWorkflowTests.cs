@@ -247,15 +247,19 @@ public sealed partial class OwnerWorkflowTests
     private sealed class MemoryCollaborationStore : IListViewerStore, IShareLinkStore, IPurchaseStore
     {
         private readonly MemoryListStore lists;
+        private readonly MemoryUserStore users;
         public ConcurrentDictionary<Guid, ListShareLink> Links { get; } = new();
         public ConcurrentDictionary<Guid, GuestIdentity> Guests { get; } = new();
         public ConcurrentDictionary<Guid, ItemPurchase> Marks { get; } = new();
-        public MemoryCollaborationStore(MemoryListStore lists)
+        public MemoryCollaborationStore(MemoryListStore lists, MemoryUserStore users)
         {
             this.lists = lists;
+            this.users = users;
             lists.PurchaseExists = id => Marks.Values.Any(mark => mark.WishListItemId == id && mark.IsActive);
         }
-        public Task<WishList?> GetActiveListAsync(Guid listId, CancellationToken ct = default) => Task.FromResult(lists.Lists.TryGetValue(listId, out var list) && !list.IsArchived ? list : null);
+        public Task<WishList?> GetActiveListAsync(Guid listId, CancellationToken ct = default)
+            => Task.FromResult(lists.Lists.TryGetValue(listId, out var list) && !list.IsArchived
+                && users.Users.Values.Any(owner => owner.Id == list.OwnerId && !owner.IsArchived) ? list : null);
         public Task<ListShareLink?> GetShareByHashAsync(string hash, CancellationToken ct = default) => Task.FromResult(Links.Values.SingleOrDefault(link => link.TokenHash == hash && !link.IsArchived));
         public Task<GuestIdentity?> GetGuestByHashAsync(string hash, CancellationToken ct = default) => Task.FromResult(Guests.Values.SingleOrDefault(guest => guest.CredentialHash == hash && !guest.IsArchived));
         public Task<IReadOnlyList<ItemPurchase>> GetPurchasesAsync(Guid listId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<ItemPurchase>>(Marks.Values.Where(mark => lists.Items[mark.WishListItemId].WishListId == listId).ToArray());

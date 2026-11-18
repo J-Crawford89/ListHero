@@ -80,7 +80,9 @@ public sealed partial class OwnerWorkflowTests
                     options.TokenValidationParameters.IssuerValidator = null;
                 });
                 services.RemoveAll<IUserStore>(); services.RemoveAll<IWishListStore>();
-                services.AddSingleton<IUserStore, MemoryUserStore>(); services.AddSingleton<IWishListStore, MemoryListStore>();
+                services.AddSingleton<MemoryUserStore>();
+                services.AddSingleton<IUserStore>(provider => provider.GetRequiredService<MemoryUserStore>());
+                services.AddSingleton<IWishListStore, MemoryListStore>();
             });
         }
         protected override void Dispose(bool disposing) { base.Dispose(disposing); if (disposing) rsa.Dispose(); }

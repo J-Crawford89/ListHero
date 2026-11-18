@@ -74,6 +74,7 @@ public sealed partial class ViewerPageTests
         public bool ReturnOwner { get; set; }
         public int Loads { get; private set; }
         public Exception? ReadError { get; set; }
+        public Exception? WriteError { get; set; }
         public bool FailRefreshAfterMark { get; set; }
         public Task<ListViewResponse> LoadAsync(Guid listId, bool signedIn, string? shareToken, CancellationToken ct = default)
         {
@@ -88,6 +89,7 @@ public sealed partial class ViewerPageTests
         }
         public Task<OwnPurchaseMarkResponse> MarkAsync(Guid listId, Guid itemId, bool signedIn, string? shareToken, CreatePurchaseMarkRequest request, CancellationToken ct = default)
         {
+            if (WriteError is not null) throw WriteError;
             Attempts.Add((request.IdempotencyKey, request.Quantity));
             if (FailOnce) { FailOnce = false; throw new HttpRequestException(); }
             mark = new(Guid.NewGuid(), ItemId, request.Quantity, DateTimeOffset.UtcNow, null, "AQAAAAAAAAA=");
@@ -95,6 +97,6 @@ public sealed partial class ViewerPageTests
             return Task.FromResult(mark);
         }
         public Task UndoAsync(Guid listId, OwnPurchaseMarkResponse purchase, bool signedIn, string? shareToken, CancellationToken ct = default)
-        { mark = null; return Task.CompletedTask; }
+        { if (WriteError is not null) throw WriteError; mark = null; return Task.CompletedTask; }
     }
 }

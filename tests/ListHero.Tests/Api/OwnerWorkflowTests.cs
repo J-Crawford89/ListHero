@@ -257,19 +257,20 @@ public sealed partial class OwnerWorkflowTests
         }
     }
 
-    private sealed class MemoryListStore : IWishListStore
+    private sealed class MemoryListStore(MemoryUserStore users) : IWishListStore
     {
+        private bool HasActiveOwner(Guid ownerId) => users.Users.Values.Any(user => user.Id == ownerId && !user.IsArchived);
         public ConcurrentDictionary<Guid, WishList> Lists { get; } = new();
         public ConcurrentDictionary<Guid, WishListItem> Items { get; } = new();
         public Func<Guid, bool> PurchaseExists { get; set; } = _ => false;
         public Task<IReadOnlyList<WishList>> GetByOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<WishList>>(Lists.Values.Where(list => list.OwnerId == ownerId && !list.IsArchived).ToArray());
+            => Task.FromResult<IReadOnlyList<WishList>>(Lists.Values.Where(list => list.OwnerId == ownerId && !list.IsArchived && HasActiveOwner(ownerId)).ToArray());
         public Task<IReadOnlyList<WishListSummaryResponse>> GetOwnerPreviewAsync(Guid ownerId, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<WishListSummaryResponse>>(Lists.Values.Where(list => list.OwnerId == ownerId && !list.IsArchived)
+            => Task.FromResult<IReadOnlyList<WishListSummaryResponse>>(Lists.Values.Where(list => list.OwnerId == ownerId && !list.IsArchived && HasActiveOwner(ownerId))
                 .OrderByDescending(list => list.CreatedAt).ThenBy(list => list.Id).Take(5)
                 .Select(list => new WishListSummaryResponse(list.Id, list.Name, list.Description, list.IsPublic, list.CreatedAt)).ToArray());
         public Task<WishList?> GetOwnedAsync(Guid listId, Guid ownerId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Lists.TryGetValue(listId, out var list) && list.OwnerId == ownerId && !list.IsArchived ? list : null);
+            => Task.FromResult(Lists.TryGetValue(listId, out var list) && list.OwnerId == ownerId && !list.IsArchived && HasActiveOwner(ownerId) ? list : null);
         public Task<IReadOnlyList<WishListItem>> GetItemsAsync(Guid listId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<WishListItem>>(Items.Values.Where(item => item.WishListId == listId && !item.IsArchived)
                 .OrderBy(item => item.DisplayOrder).ThenBy(item => item.Id).ToArray());
