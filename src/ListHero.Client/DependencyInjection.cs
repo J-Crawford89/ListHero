@@ -9,6 +9,7 @@ public static class DependencyInjection
     public static IServiceCollection AddListHeroClient(this IServiceCollection services)
     {
         services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<ListHero.Client.Abstractions.IClientSessionState, ClientSessionState>();
         services.AddScoped<IAppStatusService, AppStatusService>();
         services.AddScoped<IListViewerClient, ListViewerClient>();
         return services;

@@ -54,7 +54,7 @@
                     </p>
                     @if (list.CanMarkPurchases)
                     {
-                        <EditForm Model="draft.Request" OnValidSubmit="() => MarkAsync(item.Id)" FormName="@($"mark-{item.Id}")" class="mark-form">
+                        <EditForm Model="draft.Request" OnValidSubmit="() => MarkAsync(item.Id)" FormName="@($"mark-{item.Id}")" class="mark-form" data-draft data-draft-revision="@draft.Request.IdempotencyKey">
                             <DataAnnotationsValidator /><ValidationSummary />
                             <label for="@($"quantity-{item.Id}")">Quantity you're marking</label>
                             <InputNumber id="@($"quantity-{item.Id}")" @bind-Value="draft.Request.Quantity" min="1" disabled="@(IsBusy || draft.Attempted)" />

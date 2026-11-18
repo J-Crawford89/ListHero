@@ -117,10 +117,13 @@ public sealed partial class OwnerPageTests
         Assert.DoesNotContain("test-share-token", page.Markup);
     }
 
-    private static BunitContext CreateContext(out TestWishListApi api)
+    private static BunitContext CreateContext(out TestWishListApi api, bool confirmDiscard = true)
     {
         var context = new BunitContext();
         api = new();
+        var drafts = context.JSInterop.SetupModule("./_content/ListHero.UI/draft-navigation.js");
+        drafts.SetupVoid("accept", _ => true).SetVoidResult();
+        drafts.Setup<bool>("confirmDiscard", _ => true).SetResult(confirmDiscard);
         context.Services.AddSingleton<IWishListApi>(api);
         context.Services.AddSingleton<IDashboardApi>(new DashboardPageTests.Fake());
         context.AddAuthorization().SetAuthorized("Owner");

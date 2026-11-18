@@ -4,12 +4,13 @@ Reviewed November 18, 2026. This is a static review of the solution's routing, a
 
 ## Follow-up implementation status
 
-The findings below record the original review. Four follow-up batches have since been implemented locally; none has been pushed or deployed:
+The findings below record the original review. Five follow-up batches have since been implemented locally; none has been pushed or deployed:
 
 - Session persistence and navigation: commit `8fe9141` adds remembered login, session renewal/revalidation, smart root routing, `/welcome`, and protected sign-in return navigation. See [session-navigation.md](session-navigation.md) for policy, validation, and limitations.
 - Saved-list and profile editing: saving/updating access preserves the existing pin unless a pin preference is explicitly supplied. New shortcuts start unpinned. Save confirmations survive unchanged parent refreshes, and late responses cannot show success for a different list/access context. Profile conflicts allow comparison with the saved version, explicit reuse of the latest version while keeping the draft, or intentional discard. Reloading a modified profile requires confirmation. Handles already claimed in another session remain immutable.
 - Dashboard reads and viewer polling: owned previews now project at most five summaries in SQL. Saved-list inserts have one bounded duplicate-recovery update, and atomic preference/access updates preserve fields not explicitly supplied. Browser polling pauses in hidden/offline tabs, refreshes on return, and cleans up on component disposal. See [dashboard-performance.md](dashboard-performance.md) for concurrency policy and polling behavior.
 - Route and response recovery: discovery, public profiles, and saved lists validate page queries before calling the API and offer first-page recovery. Repeating a search at its existing URL refreshes results, stale reads cannot replace a new route, and saved lists handle expired sign-in with a recovery link. A shared HTTP response reader handles malformed/empty payloads and optional error details while preserving status-specific recovery. Unreadable write responses warn that the request may already have succeeded. See [route-response-resilience.md](route-response-resilience.md).
+- Cross-tab sessions and unsaved drafts: shared form tracking warns before internal navigation, history navigation, browser unload, or sign-in recovery. Successful saves, explicit discards, and restored field values clear the relevant warning. A detected session change preserves drafts when reload is declined, keeps offering recovery, and blocks authenticated token acquisition from the old circuit until a fresh page is loaded. Real browser regressions cover shared-cookie sign-in/sign-out/account changes, repeated declined reloads, and stale writes being blocked. See [drafts-and-cross-tab-sessions.md](drafts-and-cross-tab-sessions.md).
 
 Validation after the second batch: all 226 tests passed with no skips, including SQL Server and headless-browser tests. All nine assembly coverage gates passed. Local evidence: `.artifacts/qol-workflow-verified/coverage.trx` and its coverage attachment. Neither batch requires a business-data schema migration. General navigation/reauthentication draft preservation remains follow-up work.
 
@@ -17,7 +18,9 @@ Validation after the third batch: all 232 tests passed with no skips, including 
 
 Validation after the fourth batch: all 311 tests passed with no skips, including SQL Server and browser route/search recovery. All nine assembly coverage gates passed. Evidence: `.artifacts/qol-resilience-final/coverage.trx` and its coverage attachment. This batch requires no database migration or Azure/Entra configuration change.
 
-Next batch: cross-tab session regression coverage and dirty-form navigation guards. Redacted operational diagnostics, retention/restore work, and the archived-owner policy decision remain follow-up items; the UI/UX review is still deferred.
+Validation after the fifth batch: all 316 tests passed with no skips, including SQL Server and the browser session/navigation journeys. All nine assembly coverage gates passed. Evidence: `.artifacts/qol-session-drafts-final/coverage.trx` and its coverage attachment. No database migration or Azure/Entra configuration change is required.
+
+Remaining work: redacted operational diagnostics, retention/restore work, the archived-owner policy decision, and the deferred UI/UX review. Automatic protected draft restoration remains separate from the implemented navigation warnings.
 
 ## Overall assessment
 

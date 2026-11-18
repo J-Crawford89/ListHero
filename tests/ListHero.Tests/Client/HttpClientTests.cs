@@ -175,6 +175,12 @@ public sealed class HttpClientTests
         Assert.IsType<AppStatusApiClient>(scope.ServiceProvider.GetRequiredService<IAppStatusApi>());
         Assert.IsType<ListViewerClient>(scope.ServiceProvider.GetRequiredService<IListViewerClient>());
         Assert.IsType<AppStatusService>(scope.ServiceProvider.GetRequiredService<IAppStatusService>());
+        var session = scope.ServiceProvider.GetRequiredService<IClientSessionState>();
+        Assert.False(session.RequiresSignIn);
+        session.RequireSignIn();
+        Assert.True(scope.ServiceProvider.GetRequiredService<IClientSessionState>().RequiresSignIn);
+        using var another = provider.CreateScope();
+        Assert.False(another.ServiceProvider.GetRequiredService<IClientSessionState>().RequiresSignIn);
     }
 
     [Theory]

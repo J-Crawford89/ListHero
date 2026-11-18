@@ -1,0 +1,71 @@
+@implements IAsyncDisposable
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject IClientSessionState Session
+
+@if (Session.RequiresSignIn)
+{
+    <div class="request-error" role="alert" id="session-recovery">
+        <p>Your sign-in changed in another tab or expired. Copy any unsaved work, then reload to continue. Unsaved edits are still on this page.</p>
+        <button @onclick="Reload">Reload to continue</button>
+    </div>
+}
+@if (unavailable) { <p role="alert">Unsaved-change warnings are unavailable. Save your work before leaving this page.</p> }
+
+@code {
+    private IJSObjectReference? module, watcher;
+    private DotNetObjectReference<UnsavedNavigationGuard>? reference;
+    private IDisposable? navigationRegistration;
+    private bool disposed, unavailable;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            var imported = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ListHero.UI/draft-navigation.js");
+            if (disposed) { await imported.DisposeAsync(); return; }
+            module = imported;
+            reference = DotNetObjectReference.Create(this);
+            watcher = await module.InvokeAsync<IJSObjectReference>("watch", reference);
+            if (disposed) { await ReleaseWatcher(); return; }
+            navigationRegistration = Navigation.RegisterLocationChangingHandler(BeforeNavigation);
+        }
+        catch (JSException) { if (!disposed) { unavailable = true; StateHasChanged(); } }
+    }
+    private async ValueTask BeforeNavigation(LocationChangingContext context)
+    {
+        try
+        {
+            if (module is not null && !await module.InvokeAsync<bool>("confirmDiscard", context.CancellationToken)) context.PreventNavigation();
+        }
+        catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested) { context.PreventNavigation(); }
+        catch (JSDisconnectedException) { context.PreventNavigation(); }
+    }
+    [JSInvokable]
+    public Task SessionChanged() => InvokeAsync(() =>
+    {
+        if (disposed) return;
+        Session.RequireSignIn();
+        StateHasChanged();
+    });
+    private async Task Reload()
+    {
+        if (module is not null) await module.InvokeVoidAsync("reloadWithConfirmation", "Reloading discards unsaved changes. Copy them first if needed, then continue.");
+    }
+    private async Task ReleaseWatcher()
+    {
+        if (watcher is null) return;
+        try { await watcher.InvokeVoidAsync("dispose"); await watcher.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+        watcher = null;
+    }
+    public async ValueTask DisposeAsync()
+    {
+        disposed = true;
+        navigationRegistration?.Dispose();
+        reference?.Dispose();
+        await ReleaseWatcher();
+        if (module is not null) { try { await module.DisposeAsync(); } catch (JSDisconnectedException) { } module = null; }
+    }
+}

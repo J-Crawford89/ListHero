@@ -20,7 +20,7 @@
     }
     else
     {
-        <EditForm Model="draft" OnValidSubmit="Save" FormName="public-profile" id="public-profile-form" class="form-card">
+        <EditForm Model="draft" OnValidSubmit="Save" FormName="public-profile" id="public-profile-form" class="form-card" data-draft data-draft-revision="@draftRevision">
             <DataAnnotationsValidator /><ValidationSummary />
             <fieldset disabled="@IsBusy">
                 <label for="public-name">Public display name</label><InputText id="public-name" @bind-Value="draft.DisplayName" maxlength="100" />
@@ -70,6 +70,7 @@
     private bool hasConflict;
     private bool confirmDiscard;
     private string? notice;
+    private int draftRevision;
     protected override async Task OnAfterRenderAsync(bool firstRender) { if (firstRender) await Reload(); }
     private Task Reload() => RunAsync(async () =>
     {
@@ -90,6 +91,7 @@
     private void Apply(OwnProfileResponse value)
     {
         profile = value;
+        draftRevision++;
         draft = new() { DisplayName = value.DisplayName ?? value.SuggestedDisplayName, Handle = value.Handle ?? "", RowVersion = value.RowVersion, ConfirmDiscovery = value.Handle is not null };
         latest = null;
         hasConflict = false;

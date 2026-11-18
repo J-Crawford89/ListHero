@@ -73,8 +73,18 @@ public sealed partial class WebHostTests
             var returningPage = await returning.NewPageAsync();
             await returningPage.GotoAsync(shareAddress);
             await Expect(returningPage.Locator(".wish-card h2")).ToHaveTextAsync("Blue mug");
+            var signInDialogs = new DialogChoice(returningPage);
+            await returningPage.Locator(".mark-form input[type=number]").FillAsync("2");
+            await returningPage.GetByRole(AriaRole.Link, new() { Name = "Sign in", Exact = true }).First.ClickAsync();
+            await signInDialogs.WaitForCountAsync(1);
+            await Expect(returningPage).ToHaveURLAsync(shareAddress);
+            await Expect(returningPage.Locator(".mark-form input[type=number]")).ToHaveValueAsync("2");
+            Assert.DoesNotContain(await returning.CookiesAsync(), cookie => cookie.Name == "ListHero.PendingReturn");
+            signInDialogs.Accept = true;
             await returningPage.GetByRole(AriaRole.Link, new() { Name = "Sign in", Exact = true }).First.ClickAsync();
             await Expect(returningPage.Locator("h1")).ToHaveTextAsync("Welcome back, hero");
+            Assert.Equal(2, signInDialogs.Types.Count);
+            Assert.All(signInDialogs.Types, type => Assert.Equal("confirm", type));
             Assert.DoesNotContain(shareAddress.Split('#')[1], returningPage.Url);
             var pending = Assert.Single(await returning.CookiesAsync(), c => c.Name == "ListHero.PendingReturn");
             Assert.True(pending.HttpOnly); Assert.DoesNotContain(shareAddress.Split('#')[1], pending.Value);
@@ -165,6 +175,8 @@ public sealed partial class WebHostTests
         await page.GetByRole(AriaRole.Button, new() { Name = "Remove list", Exact = true }).ClickAsync();
         await page.Locator(".confirmation").GetByRole(AriaRole.Button, new() { Name = "Remove list", Exact = true }).ClickAsync();
         await Expect(page).ToHaveURLAsync(origin + "/lists");
+        await VerifyDraftNavigationAsync(browser, origin);
+        await VerifyCrossTabSessionsAsync(browser, origin, api.Services);
         Assert.Empty(errors);
     }
     private static async Task CaptureResponsiveReviewAsync(IPage page, string name)

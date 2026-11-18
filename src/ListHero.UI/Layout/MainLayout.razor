@@ -24,6 +24,7 @@
             @if (Host.CanSignIn) { <a class="button-secondary" href="@Host.SignInUrl" data-enhance-nav="false">Sign in</a> }
         </div></NotAuthorized></AuthorizeView>
 </header>
+<ListHero.UI.Components.UnsavedNavigationGuard />
 <main id="main-content" tabindex="-1">@Body</main>
 <footer class="site-footer"><span><strong>List Hero</strong> · A little help for your everyday heroes.</span><a href="/welcome">About List Hero</a><span class="footer-note">No superpowers required.</span></footer>
 <div id="blazor-error-ui" data-nosnippet>

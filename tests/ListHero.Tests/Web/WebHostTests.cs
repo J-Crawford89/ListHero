@@ -122,10 +122,11 @@ public sealed partial class WebHostTests
         }
     }
 
-    private sealed class BrowserTokens(AuthenticationStateProvider authentication) : IApiAccessTokenProvider
+    private sealed class BrowserTokens(AuthenticationStateProvider authentication, ListHero.Client.Abstractions.IClientSessionState session) : IApiAccessTokenProvider
     {
         public async Task<string> GetAsync(CancellationToken ct = default)
         {
+            if (session.RequiresSignIn) throw new SignInRequiredException();
             var user = (await authentication.GetAuthenticationStateAsync()).User;
             if (user.Identity?.IsAuthenticated != true) throw new SignInRequiredException();
             return "browser-" + user.FindFirst("oid")!.Value;

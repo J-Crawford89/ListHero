@@ -20,7 +20,7 @@
     <Routes @rendermode="InteractiveServer" />
     <ReconnectModal />
     <form id="session-context" hidden data-session="@(Context.HttpContext?.User.Identity?.IsAuthenticated == true ? "signed-in" : "anonymous")" data-session-id="@Context.HttpContext?.User.FindFirst("ListHero.SessionId")?.Value"><AntiforgeryToken /></form>
-    <script src="@Assets["session.js"]"></script>
+    <script type="module" src="@Assets["session.js"]"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 

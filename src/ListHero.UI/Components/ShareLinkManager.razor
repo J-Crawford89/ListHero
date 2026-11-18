@@ -12,7 +12,7 @@
         <label for="public-url">Public list address</label><input id="public-url" readonly value="@PublicUrl" />
         <p>Anyone can view this address. They need an account or an active share link to mark gifts.</p>
     }
-    <form id="create-share-link" @onsubmit="CreateAsync" @onsubmit:preventDefault>
+    <form id="create-share-link" @onsubmit="CreateAsync" @onsubmit:preventDefault data-draft data-draft-revision="@draftRevision">
         <fieldset disabled="@IsBusy">
             <label><input type="checkbox" @bind="expires" /> Set an expiration</label>
             @if (expires) { <label for="share-expiry">Expires (UTC)</label><input id="share-expiry" type="datetime-local" @bind="expiration" @bind:format="yyyy-MM-ddTHH:mm" required /> }
@@ -46,6 +46,7 @@
     private Guid requestedId;
     private bool needsLoad;
     private bool expires;
+    private int draftRevision;
     private DateTime expiration = DateTime.UtcNow.AddDays(7);
     private string PublicUrl => ShareUrls.Build(ListId);
     private string ShareUrl(string token) => ShareUrls.Build(ListId, token);
@@ -70,6 +71,7 @@
     {
         var id = ListId;
         await Sharing.CreateLinkAsync(id, new() { ExpiresAt = expires ? new DateTimeOffset(DateTime.SpecifyKind(expiration, DateTimeKind.Utc)) : null }, Cancellation);
+        if (id == ListId) draftRevision++;
         var result = await Sharing.GetLinksAsync(id, Cancellation);
         if (id == ListId) links = result;
     });

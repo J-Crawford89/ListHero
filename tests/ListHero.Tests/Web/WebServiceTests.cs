@@ -73,7 +73,7 @@ public sealed class WebServiceTests
         var proxy = (AcquisitionProxy)acquisition;
         var state = new UserState(authenticated);
         var config = Configuration();
-        var provider = new WebApiAccessTokenProvider(state, acquisition, config);
+        var provider = new WebApiAccessTokenProvider(state, acquisition, config, new ListHero.Client.Services.ClientSessionState());
         using var cancellation = new CancellationTokenSource();
         if (!authenticated)
         {
@@ -95,7 +95,7 @@ public sealed class WebServiceTests
     {
         var acquisition = DispatchProxy.Create<ITokenAcquisition, AcquisitionProxy>();
         var proxy = (AcquisitionProxy)acquisition;
-        var provider = new WebApiAccessTokenProvider(new UserState(true), acquisition, Configuration());
+        var provider = new WebApiAccessTokenProvider(new UserState(true), acquisition, Configuration(), new ListHero.Client.Services.ClientSessionState());
         proxy.Failure = new MsalUiRequiredException("interaction_required", "Test session requires renewal");
         await Assert.ThrowsAsync<SignInRequiredException>(() => provider.GetAsync());
         proxy.Failure = new MicrosoftIdentityWebChallengeUserException(new MsalUiRequiredException("interaction_required", "Test renewal"), ["api://test/access_as_user"], "OpenIdConnect");
@@ -108,8 +108,19 @@ public sealed class WebServiceTests
     public async Task Missing_scopes_or_unconfigured_authentication_never_yield_a_token()
     {
         var acquisition = DispatchProxy.Create<ITokenAcquisition, AcquisitionProxy>();
-        await Assert.ThrowsAsync<InvalidOperationException>(() => new WebApiAccessTokenProvider(new UserState(true), acquisition, new ConfigurationBuilder().Build()).GetAsync());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => new WebApiAccessTokenProvider(new UserState(true), acquisition, new ConfigurationBuilder().Build(), new ListHero.Client.Services.ClientSessionState()).GetAsync());
         await Assert.ThrowsAsync<SignInRequiredException>(() => new UnconfiguredApiAccessTokenProvider().GetAsync());
+    }
+
+    [Fact]
+    public async Task A_detected_browser_session_change_blocks_token_acquisition_for_the_old_circuit()
+    {
+        var acquisition = DispatchProxy.Create<ITokenAcquisition, AcquisitionProxy>();
+        var session = new ListHero.Client.Services.ClientSessionState();
+        session.RequireSignIn();
+        var provider = new WebApiAccessTokenProvider(new UserState(true), acquisition, Configuration(), session);
+        await Assert.ThrowsAsync<SignInRequiredException>(() => provider.GetAsync());
+        Assert.Null(((AcquisitionProxy)acquisition).Arguments);
     }
 
     private static BrowserGuestCredentialStore Store(StorageRuntime js, IDataProtectionProvider protection)

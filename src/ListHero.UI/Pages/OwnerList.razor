@@ -2,6 +2,7 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @inherits ListHero.UI.Components.OwnerPageBase
 @inject NavigationManager Navigation
+@inject Microsoft.JSInterop.IJSRuntime JS
 @using ListHero.UI.Components
 @using System.Globalization
 
@@ -23,7 +24,7 @@
         <SaveListButton ListId="ListId" Pin="true" />
         <p><span class="private-badge">@(list.IsPublic ? "Public" : "Private")</span></p>
         <div class="action-row">
-            <button class="button-secondary" disabled="@IsBusy" @onclick="BeginListEdit">Edit list</button>
+            <button class="button-secondary" disabled="@(IsBusy || editingList)" @onclick="BeginListEdit">Edit list</button>
             <button class="button-secondary" disabled="@IsBusy" @onclick="LoadAsync">Reload saved list</button>
             <button class="button-secondary" disabled="@IsBusy" @onclick="() => removeList = true">Remove list</button>
         </div>
@@ -36,7 +37,7 @@
         }
         @if (editingList)
         {
-            <EditForm Model="listDraft" OnValidSubmit="SaveListAsync" FormName="edit-list" id="edit-list-form" class="form-card">
+            <EditForm Model="listDraft" OnValidSubmit="SaveListAsync" FormName="edit-list" id="edit-list-form" class="form-card" data-draft>
                 <DataAnnotationsValidator /><ValidationSummary /><fieldset disabled="@IsBusy">
                     <label for="edit-list-name">List name</label><InputText id="edit-list-name" @bind-Value="listDraft.Name" maxlength="200" />
                     <label for="edit-list-description">Description</label><InputTextArea id="edit-list-description" @bind-Value="listDraft.Description" maxlength="4000" />
@@ -91,7 +92,7 @@
                     {
                         <p class="confirmation" role="status">Someone may already have chosen this item as a gift. Updating the price, photo, or quantity is usually fine. If you're replacing it with a different gift, consider removing this item and adding a new one.</p>
                     }
-                    <EditForm Model="itemDraft" OnValidSubmit="SaveItemAsync" FormName="edit-item" id="edit-item-form">
+                    <EditForm Model="itemDraft" OnValidSubmit="SaveItemAsync" FormName="edit-item" id="edit-item-form" data-draft data-draft-revision="@editingItem">
                         <DataAnnotationsValidator /><ValidationSummary /><fieldset disabled="@IsBusy">
                             <WishItemFields Model="itemDraft" Prefix="edit-item" />
                             @if (list.Items.FirstOrDefault(item => item.Id == editingItem) is { } savedItem && savedItem.RowVersion != itemDraft.RowVersion)
@@ -104,17 +105,16 @@
                         </fieldset>
                     </EditForm>
                 }
-                else
-                {
+                <div hidden="@(editingItem is not null)">
                 <h2>Add a wish</h2>
-                <EditForm Model="draft" OnValidSubmit="AddAsync" FormName="add-item" id="add-item-form">
+                <EditForm Model="draft" OnValidSubmit="AddAsync" FormName="add-item" id="add-item-form" data-draft data-draft-revision="@draftRevision">
                     <DataAnnotationsValidator /><ValidationSummary />
                     <fieldset disabled="@IsBusy">
                         <WishItemFields Model="draft" />
                         <button class="button-primary" type="submit">@(IsBusy ? "Please wait…" : "Add item")</button>
                     </fieldset>
                 </EditForm>
-                }
+                </div>
             </aside>
         </div>
         <ShareLinkManager ListId="@ListId" IsPublic="@list.IsPublic" @key="ListId" />
@@ -127,6 +127,7 @@
     private CreateWishListItemRequest draft = new();
     private Guid requestedId;
     private bool needsLoad;
+    private int draftRevision;
     private bool editingList, removeList, editWarning;
     private Guid? editingItem;
     private WishListItemResponse? removingItem;
@@ -161,7 +162,7 @@
     {
         var savingId = ListId;
         var result = await Api.AddItemAsync(savingId, draft, Cancellation);
-        if (ListId == savingId) { list = result; draft = new(); }
+        if (ListId == savingId) { list = result; draft = new(); draftRevision++; }
     });
     private void BeginListEdit()
     {
@@ -179,10 +180,12 @@
     {
         var id = ListId;
         await Api.ArchiveAsync(id, new() { RowVersion = list!.RowVersion }, Cancellation);
-        if (id == ListId && !IsDisposed) Navigation.NavigateTo("/lists");
+        if (id == ListId && !IsDisposed) { await DraftNavigation.AcceptAsync(JS); Navigation.NavigateTo("/lists"); }
     });
     private Task BeginItemEditAsync(WishListItemResponse item) => RunAsync(async () =>
     {
+        if (editingItem == item.Id) return;
+        if (editingItem is not null && !await DraftNavigation.ConfirmAsync(JS, "edit-item-form")) return;
         var id = ListId;
         var warning = await Api.EditWarningAsync(id, item.Id, Cancellation);
         if (id != ListId) return;

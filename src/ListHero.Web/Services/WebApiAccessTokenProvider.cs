@@ -1,4 +1,5 @@
 using ListHero.Client.Abstractions.Api;
+using ListHero.Client.Abstractions;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Identity.Client;
@@ -7,10 +8,11 @@ using Microsoft.Identity.Web;
 namespace ListHero.Web.Services;
 
 public sealed class WebApiAccessTokenProvider(AuthenticationStateProvider authentication,
-    ITokenAcquisition acquisition, IConfiguration configuration) : IApiAccessTokenProvider
+    ITokenAcquisition acquisition, IConfiguration configuration, IClientSessionState session) : IApiAccessTokenProvider
 {
     public async Task<string> GetAsync(CancellationToken cancellationToken = default)
     {
+        if (session.RequiresSignIn) throw new SignInRequiredException();
         var user = (await authentication.GetAuthenticationStateAsync()).User;
         if (user.Identity?.IsAuthenticated != true) throw new SignInRequiredException();
         if (long.TryParse(user.FindFirst(SessionPolicy.Started)?.Value, out var started)

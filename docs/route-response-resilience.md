@@ -24,4 +24,4 @@ All 311 tests passed with no skips, including SQL Server and headless Chromium. 
 
 Component tests cover invalid query ranges/duplicates, first-page recovery, unchanged searches, cancellation/stale responses, and saved-list sign-in recovery. HTTP tests cover every adapter, unreadable success/error bodies, required fields, nullable owner/viewer shapes, unsupported encodings, and writes not being replayed. The real Blazor journey follows recovery links on all three page types and repeats a people search after the owner's last public list becomes private.
 
-Cross-tab session regression coverage, general dirty-form navigation guards, correlation/operational diagnostics, and retained-data cleanup/restore policy remain separate follow-up work.
+Cross-tab session regression coverage and dirty-form navigation guards were subsequently implemented in [drafts-and-cross-tab-sessions.md](drafts-and-cross-tab-sessions.md). Correlation/operational diagnostics and retained-data cleanup/restore policy remain follow-up work.
