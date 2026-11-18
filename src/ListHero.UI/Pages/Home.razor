@@ -9,7 +9,7 @@
         <p class="hero-description">You make the wish list. Your people bring the magic. Keep your favorite things together, share a little inspiration, and leave room for a surprise.</p>
         @if (Host.CanSignIn)
         {
-            <AuthorizeView><Authorized><a class="button-primary hero-cta" href="/lists">To my lists <span aria-hidden="true">→</span></a></Authorized>
+            <AuthorizeView><Authorized><a class="button-primary hero-cta" href="/dashboard">To my dashboard <span aria-hidden="true">→</span></a></Authorized>
                 <NotAuthorized><a class="button-primary hero-cta" href="@Host.SignInUrl" data-enhance-nav="false">Make your first list <span aria-hidden="true">→</span></a></NotAuthorized></AuthorizeView>
         }
         else

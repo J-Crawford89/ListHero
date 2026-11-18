@@ -91,7 +91,7 @@ app.UseAntiforgery();
 app.Use(async (context, next) =>
 {
     context.Response.Headers["Referrer-Policy"] = "no-referrer";
-    if (context.Request.Path.StartsWithSegments("/lists") || context.Request.Path.StartsWithSegments("/view")
+    if (context.Request.Path.StartsWithSegments("/lists") || context.Request.Path.StartsWithSegments("/view") || context.Request.Path.StartsWithSegments("/dashboard") || context.Request.Path.StartsWithSegments("/saved")
         || context.Request.Path.StartsWithSegments("/discover") || context.Request.Path.StartsWithSegments("/people")
         || context.Request.Path.StartsWithSegments("/profile"))
         context.Response.Headers.CacheControl = "no-store";
@@ -101,7 +101,7 @@ if (authenticationEnabled)
 {
     app.MapControllers();
     app.MapGet("/account/sign-in", (Guid? listId) => Results.Challenge(
-        new Microsoft.AspNetCore.Authentication.AuthenticationProperties { RedirectUri = listId.HasValue ? $"/view/{listId}" : "/lists" },
+        new Microsoft.AspNetCore.Authentication.AuthenticationProperties { RedirectUri = listId.HasValue ? $"/view/{listId}" : "/dashboard" },
         [OpenIdConnectDefaults.AuthenticationScheme])).AllowAnonymous();
     app.MapPost("/account/sign-out", async (HttpContext context, IAntiforgery antiforgery) =>
     {

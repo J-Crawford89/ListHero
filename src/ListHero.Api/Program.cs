@@ -64,7 +64,7 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.Use(async (context, next) =>
 {
-    if (context.Request.Path.StartsWithSegments("/api/lists") || context.Request.Path.StartsWithSegments("/api/session")
+    if (context.Request.Path.StartsWithSegments("/api/lists") || context.Request.Path.StartsWithSegments("/api/session") || context.Request.Path.StartsWithSegments("/api/dashboard")
         || context.Request.Path.StartsWithSegments("/api/discovery") || context.Request.Path.StartsWithSegments("/api/profile"))
         context.Response.Headers.CacheControl = "no-store";
     await next(context);
@@ -83,6 +83,7 @@ app.MapGet("/api/session", (HttpContext context) => new UserSessionResponse(
 app.MapWishListEndpoints();
 app.MapCollaborationEndpoints();
 app.MapDiscoveryEndpoints();
+app.MapDashboardEndpoints();
 app.Run();
 
 public partial class Program;

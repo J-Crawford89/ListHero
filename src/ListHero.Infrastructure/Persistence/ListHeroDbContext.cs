@@ -6,6 +6,7 @@ namespace ListHero.Infrastructure.Persistence;
 
 public sealed class ListHeroDbContext(DbContextOptions<ListHeroDbContext> options) : DbContext(options)
 {
+    public DbSet<SavedList> SavedLists => Set<SavedList>();
     public DbSet<User> Users => Set<User>();
     public DbSet<WishList> WishLists => Set<WishList>();
     public DbSet<WishListItem> WishListItems => Set<WishListItem>();
@@ -16,6 +17,12 @@ public sealed class ListHeroDbContext(DbContextOptions<ListHeroDbContext> option
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ConfigureEntity<User>(modelBuilder, "Users");
+        ConfigureEntity<SavedList>(modelBuilder, "SavedLists");
+        var saved = modelBuilder.Entity<SavedList>();
+        saved.HasIndex(e => new { e.UserId, e.WishListId }).IsUnique().HasFilter("[ArchivedAt] IS NULL");
+        saved.HasOne<User>().WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Restrict);
+        saved.HasOne<WishList>().WithMany().HasForeignKey(e => e.WishListId).OnDelete(DeleteBehavior.Restrict);
+        saved.HasOne<ListShareLink>().WithMany().HasForeignKey(e => e.ShareLinkId).OnDelete(DeleteBehavior.Restrict);
         ConfigureEntity<WishList>(modelBuilder, "WishLists");
         ConfigureEntity<WishListItem>(modelBuilder, "WishListItems");
         ConfigureEntity<ListShareLink>(modelBuilder, "ListShareLinks");

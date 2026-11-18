@@ -122,6 +122,8 @@ public sealed partial class OwnerPageTests
         var context = new BunitContext();
         api = new();
         context.Services.AddSingleton<IWishListApi>(api);
+        context.Services.AddSingleton<IDashboardApi>(new DashboardPageTests.Fake());
+        context.AddAuthorization().SetAuthorized("Owner");
         context.Services.AddSingleton<IHostPresentation>(new TestHost());
         context.Services.AddSingleton<IListCollaborationApi>(new TestCollaborationApi());
         context.Services.AddSingleton<IListShareUrlBuilder>(new ListHero.Client.Services.ListShareUrlBuilder(new Uri("https://localhost:7016/")));

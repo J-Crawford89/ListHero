@@ -19,6 +19,8 @@
     else
     {
         <p class="list-description">@list.Description</p>
+        <a href="/dashboard">Dashboard</a>
+        <SaveListButton ListId="ListId" Pin="true" />
         <p><span class="private-badge">@(list.IsPublic ? "Public" : "Private")</span></p>
         <div class="action-row">
             <button class="button-secondary" disabled="@IsBusy" @onclick="BeginListEdit">Edit list</button>

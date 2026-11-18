@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IDiscoveryStore, EfDiscoveryStore>();
         services.AddScoped<IPublicProfileStore, EfPublicProfileStore>();
         services.AddScoped<IWishListStore, EfWishListStore>();
+        services.AddScoped<ISavedListStore, EfSavedListStore>();
         services.AddScoped<EfCollaborationStore>();
         services.AddScoped<IListViewerStore>(provider => provider.GetRequiredService<EfCollaborationStore>());
         services.AddScoped<IShareLinkStore>(provider => provider.GetRequiredService<EfCollaborationStore>());

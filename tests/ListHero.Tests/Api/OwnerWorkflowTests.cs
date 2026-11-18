@@ -199,6 +199,7 @@ public sealed partial class OwnerWorkflowTests
                     services.AddSingleton<IUserStore>(provider => provider.GetRequiredService<MemoryUserStore>());
                     services.AddSingleton<ListHero.Application.Discovery.IPublicProfileStore, MemoryProfileStore>();
                     services.AddSingleton<MemoryListStore>();
+                    services.AddSingleton<ISavedListStore, EmptySavedStore>();
                     services.AddSingleton<IWishListStore>(provider => provider.GetRequiredService<MemoryListStore>());
                     services.RemoveAll<IListViewerStore>();
                     services.RemoveAll<IShareLinkStore>();
@@ -278,6 +279,13 @@ public sealed partial class OwnerWorkflowTests
         public Task<bool> HasPurchaseMarksAsync(Guid itemId, CancellationToken cancellationToken = default) => Task.FromResult(PurchaseExists(itemId));
     }
     private static long versionCounter;
+    private sealed class EmptySavedStore : ISavedListStore
+    {
+        public Task<ListShareLink?> GetShareAsync(Guid userId, Guid listId, CancellationToken ct) => Task.FromResult<ListShareLink?>(null);
+        public Task SaveAsync(Guid userId, Guid listId, Guid? shareId, bool pinned, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
+        public Task RemoveAsync(Guid userId, Guid listId, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
+        public Task<SavedListPage> GetAsync(Guid userId, int page, bool pinnedOnly, DateTimeOffset now, CancellationToken ct) => throw new NotSupportedException();
+    }
     private static void StampVersion(object entity) => entity.GetType().GetProperty("RowVersion")!
         .SetValue(entity, BitConverter.GetBytes(Interlocked.Increment(ref versionCounter)));
 }

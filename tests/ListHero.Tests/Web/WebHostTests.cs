@@ -38,7 +38,7 @@ public sealed partial class WebHostTests
         var options = factory.Services.GetRequiredService<IOptionsMonitor<OpenIdConnectOptions>>().Get(OpenIdConnectDefaults.AuthenticationScheme);
         var properties = options.StateDataFormat.Unprotect(query["state"]!);
         Assert.NotNull(properties);
-        Assert.Equal(sharedList ? $"/view/{id}" : "/lists", properties.RedirectUri);
+        Assert.Equal(sharedList ? $"/view/{id}" : "/dashboard", properties.RedirectUri);
         Assert.Equal("https://localhost/signin-oidc", query["redirect_uri"].ToString());
     }
 
@@ -101,6 +101,7 @@ public sealed partial class WebHostTests
                     services.AddHttpClient<IWishListApi, WishListApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
                     services.AddHttpClient<IListCollaborationApi, ListCollaborationApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
                     services.AddHttpClient<IDiscoveryApi, DiscoveryApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
+                    services.AddHttpClient<IDashboardApi, DashboardApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
                     services.AddHttpClient<IPublicProfileApi, PublicProfileApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
                 }
                 services.PostConfigure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>

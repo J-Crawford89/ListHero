@@ -128,6 +128,13 @@ public sealed partial class WebHostTests
         await guestPage.GotoAsync(origin + "/discover?tab=people&q=browser-jane&page=1");
         await Expect(guestPage.GetByText("No people found.", new() { Exact = false })).ToBeVisibleAsync();
         await CaptureResponsiveReviewAsync(guestPage, "discovery");
+        await page.GotoAsync(origin + "/dashboard");
+        await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Your dashboard", Exact = true })).ToBeVisibleAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Pin to dashboard", Exact = true }).ClickAsync();
+        await Expect(page.GetByRole(AriaRole.Button, new() { Name = "Unpin", Exact = true }).First).ToBeVisibleAsync();
+        await CaptureResponsiveReviewAsync(page, "dashboard");
+        await page.GotoAsync(listAddress);
+        await Expect(page.Locator(".wish-card h2")).ToHaveTextAsync("Blue mug");
         await page.GetByRole(AriaRole.Button, new() { Name = "Remove item", Exact = true }).ClickAsync();
         await page.Locator(".confirmation").GetByRole(AriaRole.Button, new() { Name = "Remove item", Exact = true }).ClickAsync();
         await Expect(page.Locator(".wish-card")).ToHaveCountAsync(0);

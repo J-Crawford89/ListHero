@@ -11,8 +11,8 @@ public sealed class DatabaseModelTests
     {
         using var db = CreateContext();
         var entityTypes = db.Model.GetEntityTypes().ToArray();
-        Assert.Equal(6, entityTypes.Length);
-        Assert.Equal(6, entityTypes.Select(entity => entity.GetTableName()).Distinct().Count());
+        Assert.Equal(7, entityTypes.Length);
+        Assert.Equal(7, entityTypes.Select(entity => entity.GetTableName()).Distinct().Count());
         Assert.All(entityTypes.SelectMany(entity => entity.GetForeignKeys()),
             foreignKey => Assert.Equal(DeleteBehavior.Restrict, foreignKey.DeleteBehavior));
         var purchase = db.Model.FindEntityType(typeof(ItemPurchase))!;

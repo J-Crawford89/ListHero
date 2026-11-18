@@ -7,7 +7,8 @@ using ListHero.Domain.Entities;
 namespace ListHero.Application.Collaboration;
 
 public sealed class ListAccessResolver(IListViewerStore store, IUserService users,
-    ICapabilityTokenService tokens, IListAccessService permissions, TimeProvider clock) : IListAccessResolver
+    ICapabilityTokenService tokens, IListAccessService permissions, TimeProvider clock,
+    ListHero.Application.Lists.ISavedListStore saved) : IListAccessResolver
 {
     public async Task<ResolvedListAccess> ResolveAsync(Guid listId, ListRequestAccess request, CancellationToken ct = default)
     {
@@ -25,6 +26,8 @@ public sealed class ListAccessResolver(IListViewerStore store, IUserService user
             var candidate = await store.GetGuestByHashAsync(tokens.HashForLookup(request.GuestCredential!), ct);
             if (candidate is not null && tokens.Matches(request.GuestCredential!, candidate.CredentialHash)) guest = candidate;
         }
+        if (share is null && request.ShareToken is null && user is not null && user.Id != list.OwnerId && !list.IsPublic)
+            share = await saved.GetShareAsync(user.Id, listId, ct);
         var viewer = new ViewerIdentity(user?.Id, guest?.Id);
         var decision = permissions.Evaluate(list, viewer, share, clock.GetUtcNow());
         if (!decision.CanView) throw new ResourceNotFoundException();

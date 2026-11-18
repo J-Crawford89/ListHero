@@ -16,6 +16,7 @@ public static class DependencyInjection
             http.BaseAddress = baseAddress;
             http.Timeout = TimeSpan.FromSeconds(10);
         });
+        services.AddHttpClient<IDashboardApi, DashboardApiClient>(http => { http.BaseAddress = baseAddress; http.Timeout = TimeSpan.FromSeconds(30); });
         services.AddHttpClient<IWishListApi, WishListApiClient>(http =>
         {
             http.BaseAddress = baseAddress;

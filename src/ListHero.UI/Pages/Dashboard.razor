@@ -1,0 +1,28 @@
+@page "/dashboard"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inherits ListHero.UI.Components.RequestPageBase
+@using ListHero.UI.Components
+@inject IDashboardApi Api
+<PageTitle>Dashboard — List Hero</PageTitle>
+<section class="content-page">
+    <p class="eyebrow">YOUR HERO HEADQUARTERS</p><h1>Your dashboard</h1>
+    <div class="action-row"><a class="button-primary" href="/lists">Create or manage a list</a><a class="button-secondary" href="/saved">Saved lists</a><a class="button-secondary" href="/discover">Discover people and lists</a></div>
+    <RequestFeedback Error="@Error" RequiresSignIn="RequiresSignIn" />
+    @if (data is null) { <p>@(IsBusy ? "Loading your dashboard…" : "Your dashboard could not be loaded.")</p><button @onclick="Load">Try again</button> }
+    else
+    {
+        <section><h2>Pinned lists</h2>@if (data.Pinned.Count == 0) { <p>Pin a saved list or one of your own lists to keep it close.</p> } else { <SavedListCards Items="data.Pinned" Changed="Load" /> }</section>
+        <section><h2>My lists</h2><a href="/lists">View all my lists →</a>
+            @if (data.Owned.Count == 0) { <p>Your first wish starts with a list. Create one to get going.</p> }
+            <div class="list-cards">@foreach (var list in data.Owned) { <article class="list-card"><h3><a href="@($"/lists/{list.Id}")">@list.Name</a></h3><button class="button-secondary" disabled="@IsBusy" @onclick="() => Pin(list.Id)">Pin to dashboard</button></article> }</div>
+        </section>
+        <section><h2>Saved lists</h2><a href="/saved">View all saved lists →</a>@if (data.Saved.Count == 0) { <p>Open a list someone shared with you and choose “Save this list.”</p> } else { <SavedListCards Items="data.Saved" Changed="Load" /> }</section>
+    }
+</section>
+@code {
+    private DashboardResponse? data;
+    protected override async Task OnAfterRenderAsync(bool firstRender) { if (firstRender) await Load(); }
+    private Task Load() => RunAsync(Read);
+    private async Task Read() => data = await Api.GetAsync(Cancellation);
+    private Task Pin(Guid id) => RunAsync(async () => { await Api.SaveAsync(id, true, ct: Cancellation); await Read(); });
+}

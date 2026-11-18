@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<IDiscoveryService, DiscoveryService>();
         services.AddScoped<IPublicProfileService, PublicProfileService>();
         services.AddScoped<IWishListService, WishListService>();
+        services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IListAccessResolver, ListAccessResolver>();
         services.AddScoped<IShareLinkService, ShareLinkService>();
         services.AddScoped<IListViewerService, ListViewerService>();

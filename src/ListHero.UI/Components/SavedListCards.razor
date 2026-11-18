@@ -1,0 +1,19 @@
+@inherits RequestPageBase
+@inject IDashboardApi Api
+<RequestFeedback Error="@Error" RequiresSignIn="RequiresSignIn" />
+<div class="list-cards">
+@foreach (var entry in Items)
+{
+    <article class="list-card" @key="entry.ListId">
+        <h3>@if (entry.IsAvailable) { <a href="@($"/{(entry.IsOwner ? "lists" : "view")}/{entry.ListId}")">@entry.Name</a> } else { <span>List unavailable</span> }</h3>
+        @if (entry.IsAvailable) { <button class="button-secondary" disabled="@IsBusy" @onclick="() => Pin(entry)">@(entry.IsPinned ? "Unpin" : "Pin")</button> }
+        <button class="button-secondary" disabled="@IsBusy" @onclick="() => Remove(entry.ListId)">Remove shortcut</button>
+    </article>
+}
+</div>
+@code {
+    [Parameter] public IReadOnlyList<SavedListSummary> Items { get; set; } = [];
+    [Parameter] public EventCallback Changed { get; set; }
+    private Task Pin(SavedListSummary entry) => RunAsync(async () => { await Api.SaveAsync(entry.ListId, !entry.IsPinned, ct: Cancellation); await Changed.InvokeAsync(); });
+    private Task Remove(Guid id) => RunAsync(async () => { await Api.RemoveAsync(id, Cancellation); await Changed.InvokeAsync(); });
+}

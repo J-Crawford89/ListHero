@@ -1,6 +1,6 @@
 # Test coverage
 
-Updated 2026-11-02 after public discovery implementation. The suite contains 200 cases: 192 ordinary tests, seven opt-in SQL tests, and one opt-in browser regression that also uses SQL. The full run includes every case; the default run skips eight environment-dependent cases.
+Updated 2026-11-18 after dashboard implementation. The suite contains 203 cases: 194 ordinary tests, eight opt-in SQL tests, and one opt-in browser regression that also uses SQL. The full run includes every case; the default run skips nine environment-dependent cases.
 
 ## Measured result
 
@@ -9,18 +9,18 @@ The full Release suite passes with no skipped tests. The Release build has zero 
 | Assembly | Executable lines | Branches |
 | --- | ---: | ---: |
 | ListHero.Domain | 100.0% | 93.4% |
-| ListHero.Application | 98.8% | 92.9% |
-| ListHero.Infrastructure | 96.6% | 75.0% |
-| ListHero.Api | 96.1% | 80.0% |
-| ListHero.Contracts | 96.5% | 100.0% |
+| ListHero.Application | 98.9% | 93.1% |
+| ListHero.Infrastructure | 96.3% | 76.5% |
+| ListHero.Api | 96.3% | 80.3% |
+| ListHero.Contracts | 96.8% | 100.0% |
 | ListHero.Client | 97.4% | 100.0% |
-| ListHero.Client.Api | 100.0% | 97.8% |
-| ListHero.UI | 96.5% | 89.2% |
-| ListHero.Web | 89.0% | 73.8% |
+| ListHero.Client.Api | 100.0% | 94.3% |
+| ListHero.UI | 96.8% | 88.5% |
+| ListHero.Web | 89.0% | 75.0% |
 
-Aggregate: 1,546/1,598 executable lines (96.7%) and 921/1,040 branches (88.6%). All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
+Aggregate: 1676/1730 executable lines and 1001/1134 branches. All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
 
-Latest local evidence: `.artifacts/public-discovery-final/coverage.trx` and `.artifacts/public-discovery-final/f2e7783a-347d-4ea6-a828-62da4f45ae0c/coverage.cobertura.xml`. Both are Git-ignored.
+Latest local evidence: `.artifacts/dashboard-complete/coverage.trx` and `.artifacts/dashboard-complete/ba08a730-b40c-45ed-a262-e0e9434ff7e9/coverage.cobertura.xml`. Both are Git-ignored.
 
 The original audit had 50 passing cases, low client HTTP coverage, no Web host measurement, and no continuous SQL/coverage enforcement. Its unfiltered totals included generated code, so its aggregate percentage should not be compared directly with this consistently filtered baseline.
 

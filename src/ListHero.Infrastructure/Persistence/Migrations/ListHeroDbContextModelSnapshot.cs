@@ -140,6 +140,42 @@ namespace ListHero.Infrastructure.Persistence.Migrations
                     b.ToTable("ListShareLinks", (string)null);
                 });
 
+            modelBuilder.Entity("ListHero.Domain.Entities.SavedList", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ArchivedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("ShareLinkId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WishListId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShareLinkId");
+
+                    b.HasIndex("WishListId");
+
+                    b.HasIndex("UserId", "WishListId")
+                        .IsUnique()
+                        .HasFilter("[ArchivedAt] IS NULL");
+
+                    b.ToTable("SavedLists", (string)null);
+                });
+
             modelBuilder.Entity("ListHero.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -325,6 +361,26 @@ namespace ListHero.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ListHero.Domain.Entities.ListShareLink", b =>
                 {
+                    b.HasOne("ListHero.Domain.Entities.WishList", null)
+                        .WithMany()
+                        .HasForeignKey("WishListId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ListHero.Domain.Entities.SavedList", b =>
+                {
+                    b.HasOne("ListHero.Domain.Entities.ListShareLink", null)
+                        .WithMany()
+                        .HasForeignKey("ShareLinkId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ListHero.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("ListHero.Domain.Entities.WishList", null)
                         .WithMany()
                         .HasForeignKey("WishListId")

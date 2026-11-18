@@ -23,6 +23,7 @@
     else
     {
         <p class="list-description">@list.Description</p>
+        @if (signedIn) { <SaveListButton ListId="ListId" ShareToken="shareToken" /> }
         <p>Marks help everyone coordinate gifts. They don't confirm an actual purchase.</p>
         <button class="button-secondary" disabled="@IsBusy" @onclick="LoadAsync">Refresh list</button>
         @if (!list.CanMarkPurchases)
