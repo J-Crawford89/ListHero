@@ -2,6 +2,8 @@
 
 The workflow is [CI and beta deployment](https://github.com/J-Crawford89/ListHero/actions/workflows/ci.yml). Pull requests run tests. Pushes to `master` and manual runs on `master` also deploy the existing Azure beta, after both test jobs succeed.
 
+The separate [credential-expiry alert workflow](credential-expiry-alerts.md) checks recorded dates daily or on manual request. It has no deployment job, Azure identity, secrets, or app/database polling. Its optional manual notification test intentionally fails to verify GitHub failure-notification delivery. Like the other local review batches, it has not been pushed or activated.
+
 ## What runs
 
 1. Ubuntu builds the .NET 10 solution and runs the ordinary tests.

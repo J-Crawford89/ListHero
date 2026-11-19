@@ -60,6 +60,8 @@ See [test coverage and full-suite instructions](docs/test-coverage.md) to run th
 
 See [retention and recovery](docs/retention-and-restore.md) for preview-first cache/test-database maintenance, portable encrypted key-ring backups, and the synthetic LocalDB backup/restore drill. Business history is retained; no maintenance runs automatically.
 
+See [credential-expiry alerts](docs/credential-expiry-alerts.md) for the separate daily GitHub check, non-secret date inventory, local commands, notification activation, and scheduler limitations. It checks recorded dates without waking Azure or deploying.
+
 ## Run locally
 
 For HTTPS, trust the .NET development certificate if it is not already trusted:

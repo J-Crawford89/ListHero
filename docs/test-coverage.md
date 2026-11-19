@@ -1,6 +1,6 @@
 # Test coverage
 
-Updated 2026-11-18 after the automatic draft recovery batch. The suite contains 483 cases. The full run includes every case; the default run skips environment-dependent SQL and browser checks. See the [quality review follow-ups](quality-review-2026-11-18.md) for changes since the original dashboard baseline.
+Updated after the credential-expiry alert batch. The suite contains 508 cases. The full run includes every case; the default run skips environment-dependent SQL and browser checks. See the [quality review follow-ups](quality-review-2026-11-18.md) for changes since the original dashboard baseline.
 
 ## Measured result
 
@@ -20,11 +20,13 @@ The full Release suite passes with no skipped tests. The Release build has zero 
 
 Aggregate: 2860/2932 executable lines and 1957/2176 branches. All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
 
-Latest local evidence: `.artifacts/qol-draft-recovery-release/coverage.trx` and `.artifacts/qol-draft-recovery-release/b7e71717-b4c7-44e5-9b0a-5c8c6f0c968d/coverage.cobertura.xml`. Both are Git-ignored.
+Latest local evidence: `.artifacts/qol-credential-expiry-final/coverage.trx` and `.artifacts/qol-credential-expiry-final/9ba7740f-9153-4dfd-9876-50115bff260e/coverage.cobertura.xml`. Both are Git-ignored. The credential scripts are verified by child-process tests; PowerShell is not measured by the .NET application assembly coverage collector.
 
 The original audit had 50 passing cases, low client HTTP coverage, no Web host measurement, and no continuous SQL/coverage enforcement. Its unfiltered totals included generated code, so its aggregate percentage should not be compared directly with this consistently filtered baseline.
 
 ## Gaps closed
+
+- **Credential-expiry alerts:** actual offline checker tests verify exact UTC warning/urgent/expired thresholds, missing metadata, independent credential states, schema/identity/date validation, redacted failure/summary output, operator updates, and public certificate dates from a synthetic Windows-protected backup. Tests remove cloud CLIs from child-process `PATH`; the schedule uses no secret/cloud identity or application polling. Actionlint checks the workflow, whose explicit notification-test mode is inactive until manually requested after a future push. Live delivery remains a separate GitHub acceptance check. See [credential-expiry alerts](credential-expiry-alerts.md).
 
 - **Automatic draft recovery:** encrypted, account/tenant/form-bound tab snapshots, exact expiry, size/count bounds, lost-key/tamper cleanup, anonymous sign-in recovery, safe storage failures, and circuit identity locking. Component tests cover restore/discard, original concurrency metadata, raw fields, unavailable targets, stale callbacks, and saving-state races. The browser recovers each business form against real SQL, round-trips 4,000 non-ASCII characters, preserves a concurrent edit conflict, rejects an archived item, isolates switched accounts, and retries a committed mark after a lost response without duplication. See [automatic draft recovery](automatic-draft-recovery.md).
 
