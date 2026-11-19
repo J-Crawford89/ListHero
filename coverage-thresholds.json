@@ -7,5 +7,6 @@
   "ListHero.Client": { "line": 90, "branch": 80 },
   "ListHero.Client.Api": { "line": 95, "branch": 90 },
   "ListHero.UI": { "line": 90, "branch": 80 },
-  "ListHero.Web": { "line": 80, "branch": 65 }
+  "ListHero.Web": { "line": 80, "branch": 65 },
+  "ListHero.LiveBackup": { "line": 90, "branch": 80 }
 }

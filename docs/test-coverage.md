@@ -1,10 +1,10 @@
 # Test coverage
 
-Updated after the credential-expiry alert batch. The suite contains 508 cases. The full run includes every case; the default run skips environment-dependent SQL and browser checks. See the [quality review follow-ups](quality-review-2026-11-18.md) for changes since the original dashboard baseline.
+Updated after the portable live backup batch. The suite contains 530 cases. The full run includes every case; the default run skips environment-dependent SQL and browser checks. See the [quality review follow-ups](quality-review-2026-11-18.md) for changes since the original dashboard baseline.
 
 ## Measured result
 
-The full Release suite passes with no skipped tests. The Release build has zero warnings and errors. Coverage is collected across all nine application assemblies with `coverage.runsettings`, excluding generated OpenAPI code, build output, and EF migrations/model metadata. Migration execution is still verified by SQL tests. Razor component code remains included.
+The full Release suite passes with no skipped tests. The Release build has zero warnings and errors. Coverage is collected across all nine application assemblies and the separate backup tool with `coverage.runsettings`, excluding generated OpenAPI code, build output, and EF migrations/model metadata. Migration execution is still verified by SQL tests. Razor component code remains included. The nine application gates are unchanged; the new backup tool has its own 90% line / 80% branch gate.
 
 | Assembly | Executable lines | Branches |
 | --- | ---: | ---: |
@@ -17,14 +17,17 @@ The full Release suite passes with no skipped tests. The Release build has zero 
 | ListHero.Client.Api | 100.0% | 96.4% |
 | ListHero.UI | 97.8% | 92.0% |
 | ListHero.Web | 93.7% | 81.1% |
+| ListHero.LiveBackup | 99.3% | 88.7% |
 
-Aggregate: 2860/2932 executable lines and 1957/2176 branches. All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
+Aggregate: 3163/3237 executable lines and 2209/2460 branches. All ten per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
 
-Latest local evidence: `.artifacts/qol-credential-expiry-final/coverage.trx` and `.artifacts/qol-credential-expiry-final/9ba7740f-9153-4dfd-9876-50115bff260e/coverage.cobertura.xml`. Both are Git-ignored. The credential scripts are verified by child-process tests; PowerShell is not measured by the .NET application assembly coverage collector.
+Latest local evidence: `.artifacts/qol-live-backup-complete/coverage.trx` and `.artifacts/qol-live-backup-complete/fbdc3577-9c12-4da4-9b7b-eda775647c36/coverage.cobertura.xml`. Both are Git-ignored. PowerShell wrappers are verified by child-process tests; PowerShell is not measured by the .NET assembly coverage collector. An earlier repeat hit Chromium `ERR_NO_BUFFER_SPACE` in the existing pagination journey; the unchanged full rerun passed every case.
 
 The original audit had 50 passing cases, low client HTTP coverage, no Web host measurement, and no continuous SQL/coverage enforcement. Its unfiltered totals included generated code, so its aggregate percentage should not be compared directly with this consistently filtered baseline.
 
 ## Gaps closed
+
+- **Portable live backup tooling:** synthetic ARM/Kudu reads validate fixed bearer-authenticated endpoints and bounded responses; real LocalDB DacFx export/import verifies archived history, guest hashes, purchase marks, token-cache bytes, and migration history. Encrypted capture/offline unpack recovers both original key rings/certificates and protected payloads. Tests reject running/wrong resources, mismatched releases, unsafe key archives, changed configuration/key/site snapshots, incorrect passwords, tampering/truncation, and invalid manifest/path/hash contents. Actual PowerShell wrapper tests remove cloud CLIs from `PATH`, substitute synthetic responses, and verify prerequisite/native-error redaction. Live Azure capture/restore remains a separate acceptance operation. See [portable backup](live-backup.md).
 
 - **Credential-expiry alerts:** actual offline checker tests verify exact UTC warning/urgent/expired thresholds, missing metadata, independent credential states, schema/identity/date validation, redacted failure/summary output, operator updates, and public certificate dates from a synthetic Windows-protected backup. Tests remove cloud CLIs from child-process `PATH`; the schedule uses no secret/cloud identity or application polling. Actionlint checks the workflow, whose explicit notification-test mode is inactive until manually requested after a future push. Live delivery remains a separate GitHub acceptance check. See [credential-expiry alerts](credential-expiry-alerts.md).
 

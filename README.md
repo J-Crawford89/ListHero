@@ -6,7 +6,7 @@ A consumer wish-list app built with .NET 10, a Blazor Web App using Interactive 
 
 Implemented:
 
-- Nine application projects and one test project in `ListHero.slnx`.
+- Nine application projects, two operator tools, and one test project in `ListHero.slnx`.
 - Shared landing page, layout, styles, and an interactive development connection check.
 - Separate client orchestration and HTTP transport libraries, demonstrated by the API connection check.
 - Six domain entities, SQL Server mappings, and an initial EF Core migration.
@@ -162,6 +162,8 @@ The [CI/CD pipeline](docs/ci-cd.md) tests pull requests and deploys successful `
 The [free Azure beta](https://listhero-yj3pk6oimchdi.azurewebsites.net/) is deployed in Central US, with verified F1 hosting and Azure SQL free allowance/quota pausing. The owner confirmed hosted sign-in and test list/item creation. See the [environment and deployment guide](docs/free-hosting.md) for scripts, limits, and remaining beta checks. No paid fallback is selected. API keys protect recoverable share tokens; web keys protect login cookies and persisted guest credentials. Losing the hosted key ring can make those existing values unreadable. Multiple instances of the same host must share its key ring and application name.
 
 The MAUI host is deliberately deferred. It will reference UI, Client, Client.Api, and Contracts, provide device storage/authentication adapters, and continue to use the same API. Domain, Application, and Infrastructure belong to the backend.
+
+The [portable beta backup tool](docs/live-backup.md) packages database data, deployed apps/settings, and both complete key rings/certificates into an authenticated encrypted archive during an explicit maintenance window. Offline unpacking requires only the separate backup passphrase. Live capture and a hosted recovery rehearsal remain operator acceptance steps.
 
 See [architecture and accepted product rules](docs/architecture.md) for project ownership and the next implementation sequence.
 

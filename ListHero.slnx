@@ -14,6 +14,7 @@
     <Project Path="tests/ListHero.Tests/ListHero.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="scripts/LiveBackup/ListHero.LiveBackup.csproj" />
     <Project Path="scripts/Maintenance/Maintenance.csproj" />
   </Folder>
 </Solution>

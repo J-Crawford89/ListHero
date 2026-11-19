@@ -43,3 +43,5 @@ To roll back application code, revert the affected commit and push the revert th
 The repository is public, so standard GitHub-hosted runner minutes are free under [GitHub Actions billing rules](https://docs.github.com/en/actions/concepts/billing-and-usage). Artifacts still have storage limits; reports have short retention and deployment packages are not uploaded. Azure's [existing free-tier limits](free-hosting.md) remain in effect. This workflow does not configure paid runners or change billing settings.
 
 Reference: [Microsoft's GitHub OIDC setup](https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure-openid-connect).
+
+The [portable beta backup tool](live-backup.md) is a separate operator command, never invoked by this pipeline. Its DacFx dependency belongs only to the tool/test graph; it is not added to the API or web runtime. CI includes its synthetic SQL export/import and safe CLI tests, with a separate 90% line / 80% branch gate in addition to the unchanged nine application gates. Tests never receive live backup credentials or capture live data.

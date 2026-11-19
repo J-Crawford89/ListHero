@@ -11,3 +11,6 @@ TestResults/
 .env.*
 !.env.example
 .artifacts/
+*.lhb
+*.bacpac
+*.partial
