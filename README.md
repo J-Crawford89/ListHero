@@ -163,7 +163,7 @@ The [free Azure beta](https://listhero-yj3pk6oimchdi.azurewebsites.net/) is depl
 
 The MAUI host is deliberately deferred. It will reference UI, Client, Client.Api, and Contracts, provide device storage/authentication adapters, and continue to use the same API. Domain, Application, and Infrastructure belong to the backend.
 
-The [portable beta backup tool](docs/live-backup.md) packages database data, deployed apps/settings, and both complete key rings/certificates into an authenticated encrypted archive during an explicit maintenance window. Offline unpacking requires only the separate backup passphrase. Live capture and a hosted recovery rehearsal remain operator acceptance steps.
+The [portable beta backup tool](docs/live-backup.md) packages database data, deployed apps/settings, and both complete key rings/certificates into an authenticated encrypted archive during an explicit maintenance window. Offline unpacking requires only the separate backup passphrase. The first live capture and offline verification passed November 19, with both hosted apps restored. Off-machine retention and a hosted recovery rehearsal remain operator acceptance steps.
 
 See [architecture and accepted product rules](docs/architecture.md) for project ownership and the next implementation sequence.
 
