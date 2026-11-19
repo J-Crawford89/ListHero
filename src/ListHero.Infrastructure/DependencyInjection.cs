@@ -15,6 +15,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddListHeroInfrastructure(this IServiceCollection services, string connectionString, bool enableRetryOnFailure = false)
     {
+        services.AddSingleton<ListHero.Infrastructure.Products.IPublicProductNetwork, ListHero.Infrastructure.Products.PublicProductNetwork>();
+        services.AddSingleton<ListHero.Infrastructure.Products.IProductPageFetcher, ListHero.Infrastructure.Products.ProductPageFetcher>();
+        services.AddSingleton<ListHero.Infrastructure.Products.ProductHtmlParser>();
+        services.AddSingleton<ListHero.Application.Products.IProductLinkImporter, ListHero.Infrastructure.Products.ProductLinkImporter>();
         services.AddDbContext<ListHeroDbContext>(options => options.UseSqlServer(connectionString, sql =>
         {
             if (enableRetryOnFailure) sql.EnableRetryOnFailure(6, TimeSpan.FromSeconds(10), null);

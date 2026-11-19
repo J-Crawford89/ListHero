@@ -26,8 +26,18 @@ namespace ListHero.Tests.Api;
 
 public sealed partial class OwnerWorkflowTests
 {
-    internal static WebApplicationFactory<ListHero.Api.ApiAssemblyMarker> CreateBrowserApiFactory()
-        => new OwnerApiFactory(IsolatedSqlConnection("_Browser"));
+    internal static WebApplicationFactory<ListHero.Api.ApiAssemblyMarker> CreateBrowserApiFactory(Action<IServiceCollection>? overrides = null)
+        => new OwnerApiFactory(IsolatedSqlConnection("_Browser"), overrides: services =>
+        {
+            // Browser fixtures never contact real retailers.
+            services.AddSingleton<ListHero.Infrastructure.Products.IProductPageFetcher, UnavailableProductPages>();
+            overrides?.Invoke(services);
+        });
+    private sealed class UnavailableProductPages : ListHero.Infrastructure.Products.IProductPageFetcher
+    {
+        public Task<ListHero.Infrastructure.Products.ProductPage?> HttpAsync(Uri uri, CancellationToken ct) => Task.FromResult<ListHero.Infrastructure.Products.ProductPage?>(null);
+        public Task<ListHero.Infrastructure.Products.ProductPage?> BrowserAsync(Uri uri, CancellationToken ct) => Task.FromResult<ListHero.Infrastructure.Products.ProductPage?>(null);
+    }
     [Fact]
     public async Task Owner_can_create_reopen_and_add_items_through_the_client_and_API()
     {

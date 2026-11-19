@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="Microsoft.Playwright" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" />
     <ProjectReference Include="../ListHero.Application/ListHero.Application.csproj" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />

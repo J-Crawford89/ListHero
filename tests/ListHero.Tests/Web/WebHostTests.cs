@@ -104,6 +104,7 @@ public sealed partial class WebHostTests
                     services.AddHttpClient<IDiscoveryApi, DiscoveryApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
                     services.AddHttpClient<IDashboardApi, DashboardApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
                     services.AddHttpClient<IPublicProfileApi, PublicProfileApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
+                    services.AddHttpClient<IProductLinkApi, ProductLinkApiClient>().ConfigurePrimaryHttpMessageHandler(apiHandler);
                 }
                 services.PostConfigure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
                 {

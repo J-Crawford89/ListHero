@@ -11,6 +11,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddListHeroApplication(this IServiceCollection services)
     {
+        services.AddScoped<ListHero.Application.Products.IProductLinkService, ListHero.Application.Products.ProductLinkService>();
         services.AddSingleton<IListAccessService, ListAccessService>();
         services.AddScoped<IWishListReadService, WishListReadService>();
         services.AddSingleton(TimeProvider.System);

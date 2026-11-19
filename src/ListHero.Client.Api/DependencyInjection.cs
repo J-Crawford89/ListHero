@@ -12,6 +12,7 @@ public static class DependencyInjection
         if (!baseAddress.AbsolutePath.EndsWith('/'))
             throw new ArgumentException("The API address must end with a slash.", nameof(baseAddress));
         services.AddTransient<ApiDiagnosticsHandler>();
+        services.AddHttpClient<IProductLinkApi, ProductLinkApiClient>(http => { http.BaseAddress = baseAddress; http.Timeout = TimeSpan.FromSeconds(45); }).AddHttpMessageHandler<ApiDiagnosticsHandler>();
         services.AddHttpClient<IAppStatusApi, AppStatusApiClient>(http =>
         {
             http.BaseAddress = baseAddress;

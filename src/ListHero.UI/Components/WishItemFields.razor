@@ -1,13 +1,68 @@
+@implements IAsyncDisposable
+@using ListHero.Client.Abstractions.Api
+@using Microsoft.JSInterop
+@inject IProductLinkApi api
+@inject IJSRuntime JS
+<span id="@(Prefix + "-import-context")" hidden data-import-context="@contextId"></span>
 <label for="@(Prefix + "-name")">Name</label><InputText id="@(Prefix + "-name")" @bind-Value="Model.Name" maxlength="200" />
 <label for="@(Prefix + "-description")">Description</label><InputTextArea id="@(Prefix + "-description")" @bind-Value="Model.Description" maxlength="4000" rows="3" />
 <label for="@(Prefix + "-price")">Approximate price per item ($, optional)</label><InputNumber id="@(Prefix + "-price")" @bind-Value="Model.ApproximateUnitPrice" min="0" step="any" />
 <label for="@(Prefix + "-quantity")">Quantity wanted</label><InputNumber id="@(Prefix + "-quantity")" @bind-Value="Model.DesiredQuantity" min="1" />
 <label for="@(Prefix + "-priority")">Priority (higher means more important)</label><InputNumber id="@(Prefix + "-priority")" @bind-Value="Model.Priority" />
 <label for="@(Prefix + "-order")">Display order (lower appears first)</label><InputNumber id="@(Prefix + "-order")" @bind-Value="Model.DisplayOrder" />
-<label for="@(Prefix + "-link")">Item link (optional)</label><InputText id="@(Prefix + "-link")" @bind-Value="Model.Url" maxlength="2048" />
+<label for="@(Prefix + "-link")">Item link (optional)</label><InputText id="@(Prefix + "-link")" @bind-Value="Model.Url" @bind-Value:after="LinkChanged" maxlength="2048" />
+<button type="button" class="button-secondary" disabled="@(importing || string.IsNullOrWhiteSpace(Model.Url))" @onclick="ImportAsync">@(importing ? "Reading item link…" : "Get item details")</button>
+@if (message is not null) { <p role="status" aria-live="polite">@message</p> }
 <label for="@(Prefix + "-image")">Image link (optional)</label><InputText id="@(Prefix + "-image")" @bind-Value="Model.ImageUrl" maxlength="2048" />
 
 @code {
     [Parameter, EditorRequired] public CreateWishListItemRequest Model { get; set; } = default!;
     [Parameter] public string Prefix { get; set; } = "item";
+    private CreateWishListItemRequest? previousModel;
+    private string contextId = Guid.NewGuid().ToString("N");
+    private string? lastUrl, message;
+    private bool importing, disposed;
+    private CancellationTokenSource? pending;
+    private IJSObjectReference? module;
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(previousModel, Model))
+        {
+            pending?.Cancel(); previousModel = Model; contextId = Guid.NewGuid().ToString("N");
+            lastUrl = null; message = null; importing = false;
+        }
+    }
+    private Task LinkChanged() => string.Equals(lastUrl, Model.Url?.Trim(), StringComparison.Ordinal) ? Task.CompletedTask : ImportAsync();
+    private async Task ImportAsync()
+    {
+        pending?.Cancel();
+        var url = Model.Url?.Trim(); lastUrl = url;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != "https") { importing = false; message = "Paste a full HTTPS product link to look up its details."; return; }
+        var model = Model; var identity = contextId;
+        using var source = new CancellationTokenSource(); pending = source; importing = true; message = "Reading the link. You can keep editing; existing fields will be kept.";
+        bool IsCurrent() => !disposed && !source.IsCancellationRequested && identity == contextId && ReferenceEquals(Model, model) && Model.Url?.Trim() == url;
+        try
+        {
+            var result = await api.ImportAsync(url!, source.Token);
+            if (!IsCurrent()) return;
+            if (result.HasDetails)
+            {
+                module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ListHero.UI/product-import.js");
+                // Check current raw DOM values atomically, including text not yet blurred/bound.
+                var count = await module.InvokeAsync<int>("applySuggestions", Prefix, identity, url, result);
+                if (!IsCurrent()) return;
+                message = count > 0 ? "Added the available details to empty fields. Review them before saving; some details may be missing." : "Your existing details were kept. You can edit them yourself.";
+            }
+            else message = result.Status == "busy" ? "Item lookup is busy. Try again shortly, or enter the details yourself." : "We couldn't find usable details for that link. You can enter them yourself.";
+        }
+        catch (OperationCanceledException) { if (IsCurrent()) message = "Item lookup took too long. Your entries were kept; you can try again."; }
+        catch (SignInRequiredException) { if (IsCurrent()) message = "Please sign in again to look up item details. Your draft is still here."; }
+        catch (Exception e) when (e is ApiRequestException or HttpRequestException or JSException) { if (IsCurrent()) message = "Item lookup is unavailable. Your entries were kept; you can fill in the details yourself."; }
+        finally { if (ReferenceEquals(pending, source)) { pending = null; importing = false; } }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        disposed = true; pending?.Cancel();
+        if (module is not null) { try { await module.DisposeAsync(); } catch (JSDisconnectedException) { } }
+    }
 }

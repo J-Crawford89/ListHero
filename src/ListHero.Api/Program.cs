@@ -68,7 +68,8 @@ app.UseExceptionHandler();
 app.Use(async (context, next) =>
 {
     if (context.Request.Path.StartsWithSegments("/api/lists") || context.Request.Path.StartsWithSegments("/api/session") || context.Request.Path.StartsWithSegments("/api/dashboard")
-        || context.Request.Path.StartsWithSegments("/api/discovery") || context.Request.Path.StartsWithSegments("/api/profile"))
+        || context.Request.Path.StartsWithSegments("/api/discovery") || context.Request.Path.StartsWithSegments("/api/profile")
+        || context.Request.Path.StartsWithSegments("/api/item-metadata"))
         context.Response.Headers.CacheControl = "no-store";
     await next(context);
 });
@@ -97,6 +98,7 @@ app.MapWishListEndpoints();
 app.MapCollaborationEndpoints();
 app.MapDiscoveryEndpoints();
 app.MapDashboardEndpoints();
+app.MapProductLinkEndpoints();
 app.Run();
 
 public partial class Program;

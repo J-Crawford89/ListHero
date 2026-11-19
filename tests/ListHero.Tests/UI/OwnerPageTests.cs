@@ -125,6 +125,7 @@ public sealed partial class OwnerPageTests
         drafts.SetupVoid("accept", _ => true).SetVoidResult();
         drafts.Setup<bool>("confirmDiscard", _ => true).SetResult(confirmDiscard);
         context.Services.AddSingleton<IWishListApi>(api);
+        context.Services.AddSingleton<IProductLinkApi>(new UnavailableProductApi());
         context.Services.AddSingleton<IDashboardApi>(new DashboardPageTests.Fake());
         context.AddAuthorization().SetAuthorized("Owner");
         context.Services.AddSingleton<IHostPresentation>(new TestHost());
@@ -139,6 +140,12 @@ public sealed partial class OwnerPageTests
         public bool IsDevelopment => true;
         public string SignInUrl => "/account/sign-in";
         public string SignOutUrl => "/account/sign-out";
+    }
+
+    private sealed class UnavailableProductApi : IProductLinkApi
+    {
+        public Task<ListHero.Contracts.Products.ProductLinkResult> ImportAsync(string url, CancellationToken ct = default)
+            => Task.FromResult(new ListHero.Contracts.Products.ProductLinkResult("unavailable"));
     }
 
     private sealed class TestWishListApi : IWishListApi
