@@ -16,6 +16,7 @@ Implemented:
 - Internal user provisioning from validated API issuer/object identity, scoped delegated API token acquisition, and authenticated HTTP transport.
 - Protected owner endpoints and shared forms to create private lists, list/reopen owned lists, and add items with all agreed fields.
 - Owner list/item editing, public/private visibility, removal confirmations, soft archival, and row-version conflict handling that preserves unsaved drafts.
+- Automatic encrypted recovery drafts for business forms, with a 24-hour lifetime in tab storage, account isolation, explicit restore/discard, and preserved concurrency/purchase retry metadata. See [draft recovery](docs/automatic-draft-recovery.md).
 - Owner share-link management with stable links, optional UTC expiration, and independent revocation; tokens travel in URL fragments and API headers.
 - Public/private viewer pages, anonymous guest-credential issuance and persistence, idempotent purchase marks, own-mark undo, fulfillment/overpurchase indicators, and purchase-free owner responses.
 - Conditional item-edit warnings and viewer refresh every 20 seconds.

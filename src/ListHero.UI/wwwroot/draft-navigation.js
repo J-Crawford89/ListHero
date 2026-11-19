@@ -1,3 +1,4 @@
+import { flushAll } from './draft-recovery.js';
 const forms = new Map();
 const observers = new Set();
 let tracking = false, staleSession = false, skipUnload = false;
@@ -40,9 +41,16 @@ export function accept(formId) {
     for (const [form, saved] of forms)
         if (!formId || form.id === formId) saved.value = snapshot(form);
 }
+export function markRestored(formId) {
+    reconcile();
+    for (const [form, saved] of forms) if (form.id === formId) saved.value = '__recovered_unsaved_draft__';
+}
 
-export function confirmDiscard(message = 'Leave this page and discard your unsaved changes?', formId) {
-    return !hasChanges(formId) || window.confirm(message);
+export async function confirmDiscard(message = 'Leave this page with unsaved changes? Available recovery drafts stay in this tab.', formId) {
+    if (!hasChanges(formId)) return true;
+    if (!window.confirm(message)) return false;
+    await flushAll();
+    return true;
 }
 
 function navigate(action) {
@@ -52,8 +60,8 @@ function navigate(action) {
     setTimeout(() => { skipUnload = false; }, 1000);
 }
 
-export function reloadWithConfirmation(message) {
-    if (!confirmDiscard(message)) return false;
+export async function reloadWithConfirmation(message) {
+    if (!await confirmDiscard(message)) return false;
     navigate(() => location.reload());
     return true;
 }

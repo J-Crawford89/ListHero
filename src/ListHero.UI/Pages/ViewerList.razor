@@ -54,7 +54,8 @@
                     </p>
                     @if (list.CanMarkPurchases)
                     {
-                        <EditForm Model="draft.Request" OnValidSubmit="() => MarkAsync(item.Id)" FormName="@($"mark-{item.Id}")" class="mark-form" data-draft data-draft-revision="@draft.Request.IdempotencyKey">
+                        <DraftRecovery T="MarkDraft" Context="@($"list:{ListId}:mark:{item.Id}")" FormId="@($"mark-{item.Id}")" Label="purchase quantity" Model="draft" AllowAnonymous="true" Restored="@(value => RestoreMark(item.Id, value))" @ref="draft.Recovery" />
+                        <EditForm Model="draft.Request" OnValidSubmit="() => MarkAsync(item.Id)" FormName="@($"mark-{item.Id}")" id="@($"mark-{item.Id}")" class="mark-form" data-draft data-draft-revision="@draft.Request.IdempotencyKey">
                             <DataAnnotationsValidator /><ValidationSummary />
                             <label for="@($"quantity-{item.Id}")">Quantity you're marking</label>
                             <InputNumber id="@($"quantity-{item.Id}")" @bind-Value="draft.Request.Quantity" min="1" disabled="@(IsBusy || draft.Attempted)" />
@@ -137,14 +138,21 @@
         if (!drafts.TryGetValue(itemId, out var value)) drafts[itemId] = value = new();
         return value;
     }
+    private void RestoreMark(Guid itemId, RecoveredDraft<MarkDraft> value)
+    {
+        value.Model.Recovery = DraftFor(itemId).Recovery;
+        drafts[itemId] = value.Model;
+    }
     private Task MarkAsync(Guid itemId) => RunListAsync(async () =>
     {
         var id = ListId;
         var location = Navigation.Uri;
         var draft = DraftFor(itemId);
         draft.Attempted = true;
+        if (draft.Recovery is not null) await draft.Recovery.CheckpointAsync();
         var marked = await Viewer.MarkAsync(id, itemId, signedIn, shareToken, draft.Request, Cancellation);
         if (id != ListId || location != Navigation.Uri) return;
+        if (draft.Recovery is not null) await draft.Recovery.ClearAsync();
         drafts[itemId] = new();
         notice = marked.UndoneAt.HasValue ? "This earlier mark was already undone." : $"You marked {marked.Quantity}. Thank you for helping coordinate gifts.";
         await LoadCoreAsync();
@@ -204,9 +212,10 @@
         try { await subscription.InvokeVoidAsync("dispose"); await subscription.DisposeAsync(); }
         catch (JSDisconnectedException) { }
     }
-    private sealed class MarkDraft
+    public sealed class MarkDraft
     {
-        public CreatePurchaseMarkRequest Request { get; } = new() { IdempotencyKey = Guid.NewGuid() };
-        public bool Attempted { get; set; }
+        [System.Text.Json.Serialization.JsonRequired] public CreatePurchaseMarkRequest Request { get; set; } = new() { IdempotencyKey = Guid.NewGuid() };
+        [System.Text.Json.Serialization.JsonRequired] public bool Attempted { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore] public DraftRecovery<MarkDraft>? Recovery { get; set; }
     }
 }

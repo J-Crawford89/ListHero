@@ -6,7 +6,7 @@ import { startTracking, confirmDiscard, reloadWithConfirmation, navigateApproved
     const session = document.querySelector('#session-context')?.dataset.sessionId || null;
     async function reloadSession() {
         await markSessionChanged();
-        reloadWithConfirmation('Your session changed. Reloading discards unsaved form changes. Copy them first if needed, then continue.');
+        await reloadWithConfirmation('Your session changed. Reload to continue? Available recovery drafts stay in this tab; copy anything not yet saved.');
     }
     const token = () => document.querySelector('#session-context input[name="__RequestVerificationToken"]')?.value ?? '';
     async function check() {
@@ -29,7 +29,7 @@ import { startTracking, confirmDiscard, reloadWithConfirmation, navigateApproved
         const url = new URL(anchor.href, location.href);
         if (url.origin !== location.origin || !['/sign-in', '/account/sign-in'].includes(url.pathname)) return;
         event.preventDefault(); event.stopImmediatePropagation();
-        if (!confirmDiscard('Signing in reloads this page. Unsaved changes will not be restored. Copy them first if needed. Continue?')) return;
+        if (!await confirmDiscard('Signing in reloads this page. Continue? Available recovery drafts stay in this tab; copy anything not yet saved.')) return;
         if (['/','/welcome','/sign-in'].includes(location.pathname)) { navigateApproved(url.href); return; }
         try {
             const response = await fetch('/account/pending-return', { method: 'POST', credentials: 'same-origin', body: new URLSearchParams({ __RequestVerificationToken: token(), destination: location.pathname + location.search + location.hash }) });

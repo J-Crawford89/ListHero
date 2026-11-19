@@ -12,6 +12,7 @@ Implemented locally November 18, 2026. These are operator commands, not HTTP end
 | SQL token cache | Preview expired rows; explicit apply removes at most 1,000 per invocation, only after expiry plus a 24-hour grace period. Recently expired and live rows remain. Missing cache table is a successful no-op. |
 | Local isolated SQL test databases | At least 14 days old, exact generated name, explicit test-ownership marker, and no connected sessions. Apply requires one exact target. Never force disconnects. |
 | Data Protection keys and revocation records | Retain all, together with certificates/private keys needed to decrypt them. Expired keys can still be required to decrypt old payloads. Never purge keys based on age. |
+| Browser recovery drafts | Encrypted tab-storage copies are recoverable for up to 24 hours after preservation. Expired entries are rejected/removed on access and pruned on writes; success/cancel clears relevant copies. No database draft history is created. See [automatic draft recovery](automatic-draft-recovery.md). |
 
 The [archived-account policy](archived-accounts.md) disables list access while retaining the data. Any future permanent erasure feature requires a separate product/security decision. These commands do not introduce permanent user-data deletion.
 

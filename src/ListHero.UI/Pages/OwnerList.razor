@@ -23,6 +23,8 @@
         <a href="/dashboard">Dashboard</a>
         <SaveListButton ListId="ListId" Pin="true" />
         <p><span class="private-badge">@(list.IsPublic ? "Public" : "Private")</span></p>
+        <DraftRecovery T="UpdateWishListRequest" @ref="listRecovery" @key="@($"{ListId}:details")" Context="@($"list:{ListId}:details")" FormId="edit-list-form" Label="list details" Model="listDraft" Restored="RestoreListDraft" />
+        <DraftRecovery T="UpdateWishListItemRequest" @ref="itemRecovery" @key="@($"{ListId}:edit")" Context="@($"list:{ListId}:edit-item")" FormId="edit-item-form" Label="item changes" Model="itemDraft" EntityId="@editingItem?.ToString()" Restored="RestoreItemDraft" />
         <div class="action-row">
             <button class="button-secondary" disabled="@(IsBusy || editingList)" @onclick="BeginListEdit">Edit list</button>
             <button class="button-secondary" disabled="@IsBusy" @onclick="LoadAsync">Reload saved list</button>
@@ -41,7 +43,7 @@
                 <DataAnnotationsValidator /><ValidationSummary /><fieldset disabled="@IsBusy">
                     <label for="edit-list-name">List name</label><InputText id="edit-list-name" @bind-Value="listDraft.Name" maxlength="200" />
                     <label for="edit-list-description">Description</label><InputTextArea id="edit-list-description" @bind-Value="listDraft.Description" maxlength="4000" />
-                    <label><InputCheckbox @bind-Value="listDraft.IsPublic" /> Make this list public</label>
+                    <label><InputCheckbox id="edit-list-public" @bind-Value="listDraft.IsPublic" /> Make this list public</label>
                     <p>Anyone can find public lists in search and on your public profile. Private lists require an active share link.</p>
                     <p>Choose your public name and handle in <a href="/profile">Public profile</a> before making a list public. Existing public lists become searchable when you complete that setup.</p>
                     @if (listDraft.RowVersion != list.RowVersion)
@@ -50,7 +52,7 @@
                         <button type="button" class="button-secondary" @onclick="() => listDraft.RowVersion = list.RowVersion">Use refreshed version and keep my draft</button>
                     }
                     <button class="button-primary" type="submit">Save list</button>
-                    <button class="button-secondary" type="button" @onclick="() => editingList = false">Cancel</button>
+                    <button class="button-secondary" type="button" @onclick="CancelListEdit">Cancel</button>
                 </fieldset>
             </EditForm>
         }
@@ -101,12 +103,13 @@
                                 <button type="button" class="button-secondary" @onclick="() => itemDraft.RowVersion = savedItem.RowVersion">Use refreshed version and keep my draft</button>
                             }
                             <button class="button-primary" type="submit">Save item</button>
-                            <button class="button-secondary" type="button" @onclick="() => editingItem = null">Cancel</button>
+                            <button class="button-secondary" type="button" @onclick="CancelItemEdit">Cancel</button>
                         </fieldset>
                     </EditForm>
                 }
                 <div hidden="@(editingItem is not null)">
                 <h2>Add a wish</h2>
+                <DraftRecovery T="CreateWishListItemRequest" @ref="addRecovery" @key="@($"{ListId}:add")" Context="@($"list:{ListId}:new-item")" FormId="add-item-form" Label="new item" Model="draft" Restored="RestoreNewItem" />
                 <EditForm Model="draft" OnValidSubmit="AddAsync" FormName="add-item" id="add-item-form" data-draft data-draft-revision="@draftRevision">
                     <DataAnnotationsValidator /><ValidationSummary />
                     <fieldset disabled="@IsBusy">
@@ -133,6 +136,26 @@
     private WishListItemResponse? removingItem;
     private UpdateWishListRequest listDraft = new();
     private UpdateWishListItemRequest itemDraft = new();
+    private DraftRecovery<CreateWishListItemRequest>? addRecovery;
+    private DraftRecovery<UpdateWishListRequest>? listRecovery;
+    private DraftRecovery<UpdateWishListItemRequest>? itemRecovery;
+    private void RestoreNewItem(RecoveredDraft<CreateWishListItemRequest> value) => draft = value.Model;
+    private void RestoreListDraft(RecoveredDraft<UpdateWishListRequest> value) { listDraft = value.Model; editingList = true; }
+    private Task RestoreItemDraft(RecoveredDraft<UpdateWishListItemRequest> value)
+    {
+        value.RestoreAllowed = false;
+        return RunAsync(async () =>
+        {
+            if (!Guid.TryParse(value.EntityId, out var id) || list?.Items.All(item => item.Id != id) != false) return;
+            var listId = ListId;
+            var warning = await Api.EditWarningAsync(listId, id, Cancellation);
+            if (listId != ListId || IsDisposed) return;
+            itemDraft = value.Model; editingItem = id; editWarning = warning.MayHavePurchaseMarks;
+            value.RestoreAllowed = true;
+        });
+    }
+    private async Task CancelListEdit() { editingList = false; if (listRecovery is not null) await listRecovery.ClearAsync(); }
+    private async Task CancelItemEdit() { editingItem = null; if (itemRecovery is not null) await itemRecovery.ClearAsync(); }
     protected override void OnParametersSet()
     {
         if (requestedId == ListId) return;
@@ -162,6 +185,7 @@
     {
         var savingId = ListId;
         var result = await Api.AddItemAsync(savingId, draft, Cancellation);
+        if (ListId == savingId && addRecovery is not null) await addRecovery.ClearAsync();
         if (ListId == savingId) { list = result; draft = new(); draftRevision++; }
     });
     private void BeginListEdit()
@@ -174,18 +198,26 @@
     {
         var id = ListId;
         var result = await Api.UpdateAsync(id, listDraft, Cancellation);
+        if (id == ListId && listRecovery is not null) await listRecovery.ClearAsync();
         if (id == ListId) { list = result; editingList = false; }
     });
     private Task ArchiveListAsync() => RunAsync(async () =>
     {
         var id = ListId;
         await Api.ArchiveAsync(id, new() { RowVersion = list!.RowVersion }, Cancellation);
-        if (id == ListId && !IsDisposed) { await DraftNavigation.AcceptAsync(JS); Navigation.NavigateTo("/lists"); }
+        if (id == ListId && !IsDisposed)
+        {
+            if (addRecovery is not null) await addRecovery.ClearAsync();
+            if (listRecovery is not null) await listRecovery.ClearAsync();
+            if (itemRecovery is not null) await itemRecovery.ClearAsync();
+            await DraftNavigation.AcceptAsync(JS); Navigation.NavigateTo("/lists");
+        }
     });
     private Task BeginItemEditAsync(WishListItemResponse item) => RunAsync(async () =>
     {
         if (editingItem == item.Id) return;
         if (editingItem is not null && !await DraftNavigation.ConfirmAsync(JS, "edit-item-form")) return;
+        if (editingItem is not null && itemRecovery is not null) await itemRecovery.ClearAsync();
         var id = ListId;
         var warning = await Api.EditWarningAsync(id, item.Id, Cancellation);
         if (id != ListId) return;
@@ -199,6 +231,7 @@
     {
         var id = ListId;
         var result = await Api.UpdateItemAsync(id, editingItem!.Value, itemDraft, Cancellation);
+        if (id == ListId && itemRecovery is not null) await itemRecovery.ClearAsync();
         if (id == ListId) { list = result; editingItem = null; }
     });
     private Task ArchiveItemAsync() => RunAsync(async () =>
@@ -206,6 +239,7 @@
         var id = ListId;
         var item = removingItem!;
         var result = await Api.ArchiveItemAsync(id, item.Id, new() { RowVersion = item.RowVersion }, Cancellation);
+        if (id == ListId && editingItem == item.Id && itemRecovery is not null) await itemRecovery.ClearAsync();
         if (id == ListId) { list = result; removingItem = null; if (editingItem == item.Id) editingItem = null; }
     });
 }

@@ -76,13 +76,15 @@ builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHostedDataProtection(builder.Configuration, "ListHero.Web");
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddRazorComponents().AddInteractiveServerComponents()
+    .AddHubOptions(options => options.MaximumReceiveMessageSize = 256 * 1024);
 builder.Services.AddScoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, DiagnosticCircuitHandler>();
 builder.Services.AddListHeroClient();
 builder.Services.AddListHeroApiClient(new Uri(builder.Configuration["ListHeroApi:BaseUrl"]
     ?? throw new InvalidOperationException("ListHeroApi:BaseUrl is required.")));
 builder.Services.AddScoped<ProtectedLocalStorage>();
 builder.Services.AddScoped<IGuestCredentialStore, BrowserGuestCredentialStore>();
+builder.Services.AddScoped<IDraftRecoveryStore, BrowserDraftRecoveryStore>();
 builder.Services.AddScoped<IHostPresentation, WebHostPresentation>();
 builder.Services.AddScoped<IListShareUrlBuilder>(services => new ListShareUrlBuilder(new Uri(
     builder.Configuration["Sharing:PublicWebBaseUrl"] ?? services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().BaseUri)));

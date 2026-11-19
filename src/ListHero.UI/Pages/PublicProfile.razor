@@ -20,6 +20,7 @@
     }
     else
     {
+        <DraftRecovery T="UpdatePublicProfileRequest" @ref="recovery" Context="public-profile" FormId="public-profile-form" Label="public profile" Model="draft" Restored="RestoreDraft" />
         <EditForm Model="draft" OnValidSubmit="Save" FormName="public-profile" id="public-profile-form" class="form-card" data-draft data-draft-revision="@draftRevision">
             <DataAnnotationsValidator /><ValidationSummary />
             <fieldset disabled="@IsBusy">
@@ -28,7 +29,7 @@
                 <p id="handle-help">3–30 letters, numbers, underscores or hyphens; start with a letter or number. Your handle cannot be changed after setup.</p>
                 @if (profile.Handle is null)
                 {
-                    <label class="discovery-consent"><InputCheckbox @bind-Value="draft.ConfirmDiscovery" /> I understand that my chosen name, handle and all my public lists will appear in discovery.</label>
+                    <label class="discovery-consent"><InputCheckbox id="profile-discovery-consent" @bind-Value="draft.ConfirmDiscovery" /> I understand that my chosen name, handle and all my public lists will appear in discovery.</label>
                 }
                 <button type="submit" class="button-primary" disabled="@hasConflict">Save public profile</button>
                 <button type="button" class="button-secondary" @onclick="RequestReload">Reload saved profile</button>
@@ -71,11 +72,20 @@
     private bool confirmDiscard;
     private string? notice;
     private int draftRevision;
+    private DraftRecovery<UpdatePublicProfileRequest>? recovery;
+    private void RestoreDraft(RecoveredDraft<UpdatePublicProfileRequest> value)
+    {
+        draft = value.Model;
+        if (profile?.Handle is not null) { draft.Handle = profile.Handle; draft.ConfirmDiscovery = true; }
+        hasConflict = false; latest = null;
+    }
     protected override async Task OnAfterRenderAsync(bool firstRender) { if (firstRender) await Reload(); }
     private Task Reload() => RunAsync(async () =>
     {
         notice = null;
+        var discard = profile is not null;
         Apply(await Api.GetAsync(Cancellation));
+        if (discard && recovery is not null) await recovery.ClearAsync();
     });
     private async Task RequestReload()
     {
@@ -114,11 +124,11 @@
         notice = "Your draft is ready. Review it and save when you're happy with the changes.";
         return Task.CompletedTask;
     });
-    private Task UseLatest() => RunAsync(() =>
+    private Task UseLatest() => RunAsync(async () =>
     {
         if (latest is not null) Apply(latest);
+        if (recovery is not null) await recovery.ClearAsync();
         notice = null;
-        return Task.CompletedTask;
     });
     private Task Save() => RunAsync(async () =>
     {
@@ -127,6 +137,7 @@
         try
         {
             Apply(await Api.UpdateAsync(draft, Cancellation));
+            if (recovery is not null) await recovery.ClearAsync();
             notice = "Your public profile is saved.";
         }
         catch (ApiConflictException)

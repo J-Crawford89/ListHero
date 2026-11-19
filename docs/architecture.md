@@ -32,6 +32,8 @@ The owner workflow uses `IWishListApi` in Client, `WishListApiClient` in Client.
 
 My lists uses a bounded summary page throughout those interfaces, defaulting to 15 with a maximum of 100 per page. The reusable `OwnedListBrowser` handles collection reads separately from the creation form; dashboard previews keep their five-list limit. See [My lists pagination](my-lists-pagination.md).
 
+Automatic recovery uses the client `IDraftRecoveryStore` interface and reusable `DraftRecovery<T>` UI component. The web adapter encrypts account/form-bound, expiring snapshots before writing tab storage. Recovery preserves concurrency/idempotency metadata and requires explicit restoration/save. It introduces no business database persistence; future hosts provide their own protected adapter. See [automatic draft recovery](automatic-draft-recovery.md).
+
 ## List access
 
 - Anyone may create an account through Entra External ID; an account is required to create/manage lists.

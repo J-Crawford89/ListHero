@@ -19,6 +19,7 @@
             <span class="panel-kicker">THE NEXT ADVENTURE</span>
             <h2>Make a new list</h2>
             <p>It starts private. Give it a name that feels like you.</p>
+            <DraftRecovery T="CreateWishListRequest" @ref="recovery" Context="new-list" FormId="create-list-form" Label="new list" Model="draft" Restored="RestoreDraft" />
             <EditForm Model="draft" OnValidSubmit="CreateAsync" FormName="create-list" id="create-list-form" data-draft>
                 <DataAnnotationsValidator /><ValidationSummary />
                 <fieldset disabled="@IsBusy">
@@ -34,10 +35,13 @@
 @code {
     [Parameter, SupplyParameterFromQuery(Name = "page")] public string[]? Page { get; set; }
     [Parameter, SupplyParameterFromQuery(Name = "pageSize")] public string[]? PageSize { get; set; }
-    private readonly CreateWishListRequest draft = new();
+    private CreateWishListRequest draft = new();
+    private DraftRecovery<CreateWishListRequest>? recovery;
+    private void RestoreDraft(RecoveredDraft<CreateWishListRequest> value) => draft = value.Model;
     private Task CreateAsync() => RunAsync(async () =>
     {
         var created = await Api.CreateAsync(draft, Cancellation);
+        if (recovery is not null) await recovery.ClearAsync();
         await DraftNavigation.AcceptAsync(JS, "create-list-form");
         if (!IsDisposed) Navigation.NavigateTo($"/lists/{created.Id}");
     });

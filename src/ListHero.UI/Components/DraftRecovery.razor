@@ -1,0 +1,141 @@
+@typeparam T where T : class
+@implements IAsyncDisposable
+@using System.Text.Json
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@inject IServiceProvider Services
+
+<span hidden data-recovery-form="@FormId" data-recovery-ready="@(watcher is not null ? "true" : "false")"></span>
+
+@if (candidate is not null)
+{
+    <section class="form-card draft-recovery" aria-label="@($"Recover {Label}")">
+        <p>An unsaved @Label draft is available in this tab. Restore it to review before saving.</p>
+        <button type="button" class="button-secondary" @onclick="Restore">Restore draft</button>
+        <button type="button" class="button-secondary" @onclick="ClearAsync">Discard draft</button>
+    </section>
+}
+@if (status is not null) { <p class="draft-status" role="status">@status</p> }
+
+@code {
+    [Parameter, EditorRequired] public string Context { get; set; } = "";
+    [Parameter, EditorRequired] public string FormId { get; set; } = "";
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public T Model { get; set; } = default!;
+    [Parameter] public string? EntityId { get; set; }
+    [Parameter] public bool AllowAnonymous { get; set; }
+    [Parameter] public EventCallback<RecoveredDraft<T>> Restored { get; set; }
+    private IDraftRecoveryStore? store;
+    private IJSObjectReference? module, watcher;
+    private DotNetObjectReference<DraftRecovery<T>>? reference;
+    private readonly SemaphoreSlim gate = new(1);
+    private RecoveredDraft<T>? candidate, pending;
+    private string? status;
+    private int epoch;
+    private long latestSequence;
+    private bool disposed;
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { RespectRequiredConstructorParameters = true, RespectNullableAnnotations = true };
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            store = Services.GetService(typeof(IDraftRecoveryStore)) as IDraftRecoveryStore;
+            if (store is null) return;
+            try
+            {
+                module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/ListHero.UI/draft-recovery.js");
+                if (disposed) { await module.DisposeAsync(); return; }
+                reference = DotNetObjectReference.Create(this);
+                watcher = await module.InvokeAsync<IJSObjectReference>("watch", FormId, reference, epoch);
+                if (disposed) { await DisposeAsync(); return; }
+                var content = await store.ReadAsync(Context, AllowAnonymous);
+                if (content is not null)
+                {
+                    try
+                    {
+                        candidate = JsonSerializer.Deserialize<RecoveredDraft<T>>(content, Json);
+                        if (candidate is null || candidate.Version != 1 || candidate.Model is null || candidate.Fields is null || candidate.Fields.Length > 32)
+                        { candidate = null; await store.RemoveAsync(Context, AllowAnonymous); }
+                    }
+                    catch (JsonException) { await store.RemoveAsync(Context, AllowAnonymous); }
+                }
+                if (!disposed) StateHasChanged();
+            }
+            catch (Exception e) when (e is JSException or DraftStorageException) { if (!disposed) { status = new DraftStorageException().Message; StateHasChanged(); } }
+        }
+        if (pending is not null && watcher is not null)
+        {
+            var value = pending; pending = null;
+            try
+            {
+                if (!await watcher.InvokeAsync<bool>("restore", (object)value.Fields)) { status = "The form is unavailable. Reopen it before restoring this draft."; candidate = value; StateHasChanged(); }
+            }
+            catch (JSException) { status = new DraftStorageException().Message; StateHasChanged(); }
+        }
+    }
+    [JSInvokable]
+    public Task DraftPending(int version, long sequence)
+    {
+        if (disposed || version != epoch) return Task.CompletedTask;
+        latestSequence = Math.Max(latestSequence, sequence);
+        status = "Saving recovery draft…";
+        return InvokeAsync(StateHasChanged);
+    }
+    [JSInvokable]
+    public async Task DraftChanged(DraftField[] fields, int version, long sequence = 0)
+    {
+        await gate.WaitAsync();
+        try
+        {
+            if (disposed || version != epoch || store is null || fields.Length > 32) return;
+            latestSequence = Math.Max(latestSequence, sequence);
+            await store.WriteAsync(Context, JsonSerializer.Serialize(new RecoveredDraft<T>(Model, EntityId, fields), Json), AllowAnonymous);
+            if (version == epoch && sequence >= latestSequence) status = "Recovery draft saved in this tab for up to 24 hours.";
+        }
+        catch (DraftStorageException e) { if (version == epoch) status = e.Message; }
+        finally { gate.Release(); if (!disposed) await InvokeAsync(StateHasChanged); }
+    }
+    public async Task ClearAsync()
+    {
+        epoch++;
+        latestSequence = 0;
+        if (watcher is not null) { try { await watcher.InvokeVoidAsync("reset", epoch); } catch (JSException) { } }
+        await gate.WaitAsync();
+        try { if (store is not null) await store.RemoveAsync(Context, AllowAnonymous); candidate = null; pending = null; status = null; }
+        catch (DraftStorageException e) { status = e.Message; }
+        finally { gate.Release(); if (!disposed) await InvokeAsync(StateHasChanged); }
+    }
+    public async Task CheckpointAsync()
+    {
+        if (watcher is null) return;
+        try { await watcher.InvokeVoidAsync("checkpoint"); }
+        catch (JSException) { status = new DraftStorageException().Message; if (!disposed) await InvokeAsync(StateHasChanged); }
+    }
+    private async Task Restore()
+    {
+        try { await RestoreCore(); }
+        catch (JSException) { status = new DraftStorageException().Message; }
+    }
+    private async Task RestoreCore()
+    {
+        if (candidate is null) return;
+        if (Services.GetService(typeof(IClientSessionState)) is IClientSessionState { RequiresSignIn: true })
+        { status = "Reload and sign in with the original account to recover this draft."; return; }
+        if (module is not null && !await module.InvokeAsync<bool>("confirmRestore", FormId)) return;
+        latestSequence = 0;
+        if (watcher is not null) await watcher.InvokeVoidAsync("reset", ++epoch);
+        var value = candidate;
+        await Restored.InvokeAsync(value);
+        if (disposed) return;
+        if (!value.RestoreAllowed) { status = "This draft's form or item is unavailable. Review the current list or discard the draft."; return; }
+        pending = value; candidate = null;
+        status = "Draft restored. Review it before saving; nothing has been submitted.";
+    }
+    public async ValueTask DisposeAsync()
+    {
+        disposed = true;
+        if (watcher is not null) { try { await watcher.InvokeVoidAsync("dispose"); await watcher.DisposeAsync(); } catch (JSDisconnectedException) { } }
+        reference?.Dispose();
+        if (module is not null) { try { await module.DisposeAsync(); } catch (JSDisconnectedException) { } }
+    }
+}

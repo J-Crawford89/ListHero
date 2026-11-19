@@ -12,10 +12,11 @@
         <label for="public-url">Public list address</label><input id="public-url" readonly value="@PublicUrl" />
         <p>Anyone can view this address. They need an account or an active share link to mark gifts.</p>
     }
+    <DraftRecovery T="ShareOptionsDraft" @ref="recovery" @key="ListId" Context="@($"list:{ListId}:share-options")" FormId="create-share-link" Label="share options" Model="draft" Restored="RestoreDraft" />
     <form id="create-share-link" @onsubmit="CreateAsync" @onsubmit:preventDefault data-draft data-draft-revision="@draftRevision">
         <fieldset disabled="@IsBusy">
-            <label><input type="checkbox" @bind="expires" /> Set an expiration</label>
-            @if (expires) { <label for="share-expiry">Expires (UTC)</label><input id="share-expiry" type="datetime-local" @bind="expiration" @bind:format="yyyy-MM-ddTHH:mm" required /> }
+            <label><input id="share-expires" type="checkbox" @bind="draft.Expires" /> Set an expiration</label>
+            @if (draft.Expires) { <label for="share-expiry">Expires (UTC)</label><input id="share-expiry" type="datetime-local" @bind="draft.Expiration" @bind:format="yyyy-MM-ddTHH:mm" required /> }
             <button class="button-secondary" type="submit">Create share link</button>
         </fieldset>
     </form>
@@ -45,9 +46,10 @@
     private IReadOnlyList<ShareLinkResponse>? links;
     private Guid requestedId;
     private bool needsLoad;
-    private bool expires;
+    private ShareOptionsDraft draft = new();
+    private DraftRecovery<ShareOptionsDraft>? recovery;
+    private void RestoreDraft(RecoveredDraft<ShareOptionsDraft> value) => draft = value.Model;
     private int draftRevision;
-    private DateTime expiration = DateTime.UtcNow.AddDays(7);
     private string PublicUrl => ShareUrls.Build(ListId);
     private string ShareUrl(string token) => ShareUrls.Build(ListId, token);
     protected override void OnParametersSet()
@@ -70,7 +72,8 @@
     private Task CreateAsync() => RunAsync(async () =>
     {
         var id = ListId;
-        await Sharing.CreateLinkAsync(id, new() { ExpiresAt = expires ? new DateTimeOffset(DateTime.SpecifyKind(expiration, DateTimeKind.Utc)) : null }, Cancellation);
+        await Sharing.CreateLinkAsync(id, new() { ExpiresAt = draft.Expires ? new DateTimeOffset(DateTime.SpecifyKind(draft.Expiration, DateTimeKind.Utc)) : null }, Cancellation);
+        if (id == ListId && recovery is not null) await recovery.ClearAsync();
         if (id == ListId) draftRevision++;
         var result = await Sharing.GetLinksAsync(id, Cancellation);
         if (id == ListId) links = result;

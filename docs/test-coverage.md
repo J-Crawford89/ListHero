@@ -1,6 +1,6 @@
 # Test coverage
 
-Updated 2026-11-18 after the My lists pagination batch. The suite contains 450 cases. The full run includes every case; the default run skips environment-dependent SQL and browser checks. See the [quality review follow-ups](quality-review-2026-11-18.md) for changes since the original dashboard baseline.
+Updated 2026-11-18 after the automatic draft recovery batch. The suite contains 483 cases. The full run includes every case; the default run skips environment-dependent SQL and browser checks. See the [quality review follow-ups](quality-review-2026-11-18.md) for changes since the original dashboard baseline.
 
 ## Measured result
 
@@ -15,16 +15,18 @@ The full Release suite passes with no skipped tests. The Release build has zero 
 | ListHero.Contracts | 96.8% | 100.0% |
 | ListHero.Client | 97.8% | 100.0% |
 | ListHero.Client.Api | 100.0% | 96.4% |
-| ListHero.UI | 97.6% | 92.2% |
-| ListHero.Web | 92.6% | 78.2% |
+| ListHero.UI | 97.8% | 92.0% |
+| ListHero.Web | 93.7% | 81.1% |
 
-Aggregate: 2636/2706 executable lines and 1756/1958 branches. All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
+Aggregate: 2860/2932 executable lines and 1957/2176 branches. All existing per-assembly thresholds pass. Line coverage measures execution; branch coverage measures decision alternatives. Assertions and realistic workflows provide the behavioral evidence. Neither percentage promises every possible failure has been tested.
 
-Latest local evidence: `.artifacts/qol-pagination-complete/coverage.trx` and `.artifacts/qol-pagination-complete/693e9319-982f-43c6-af70-c13b00db6e94/coverage.cobertura.xml`. Both are Git-ignored.
+Latest local evidence: `.artifacts/qol-draft-recovery-release/coverage.trx` and `.artifacts/qol-draft-recovery-release/b7e71717-b4c7-44e5-9b0a-5c8c6f0c968d/coverage.cobertura.xml`. Both are Git-ignored.
 
 The original audit had 50 passing cases, low client HTTP coverage, no Web host measurement, and no continuous SQL/coverage enforcement. Its unfiltered totals included generated code, so its aggregate percentage should not be compared directly with this consistently filtered baseline.
 
 ## Gaps closed
+
+- **Automatic draft recovery:** encrypted, account/tenant/form-bound tab snapshots, exact expiry, size/count bounds, lost-key/tamper cleanup, anonymous sign-in recovery, safe storage failures, and circuit identity locking. Component tests cover restore/discard, original concurrency metadata, raw fields, unavailable targets, stale callbacks, and saving-state races. The browser recovers each business form against real SQL, round-trips 4,000 non-ASCII characters, preserves a concurrent edit conflict, rejects an archived item, isolates switched accounts, and retries a committed mark after a lost response without duplication. See [automatic draft recovery](automatic-draft-recovery.md).
 
 - **My lists pagination:** default and configurable page sizes, malformed/duplicate/bound checks before provisioning, stable SQL ordering and projection, bounded overfetch, exact last pages, cross-owner/archived isolation, and empty later pages. UI tests verify stale-read cancellation, retry and unchanged-parameter behavior. A real browser exercises selector sizes, Previous/Next, Back/Forward, reload, and invalid-page recovery. See [My lists pagination](my-lists-pagination.md).
 

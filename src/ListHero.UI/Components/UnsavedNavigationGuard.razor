@@ -7,7 +7,7 @@
 @if (Session.RequiresSignIn)
 {
     <div class="request-error" role="alert" id="session-recovery">
-        <p>Your sign-in changed in another tab or expired. Copy any unsaved work, then reload to continue. Unsaved edits are still on this page.</p>
+        <p>Your sign-in changed in another tab or expired. Copy any unsaved work not confirmed as a recovery draft, then reload to continue. Unsaved edits are still on this page.</p>
         <button @onclick="Reload">Reload to continue</button>
     </div>
 }
@@ -51,7 +51,7 @@
     });
     private async Task Reload()
     {
-        if (module is not null) await module.InvokeVoidAsync("reloadWithConfirmation", "Reloading discards unsaved changes. Copy them first if needed, then continue.");
+        if (module is not null) await module.InvokeVoidAsync("reloadWithConfirmation", "Reload to continue? Available recovery drafts stay in this tab; copy anything not yet saved.");
     }
     private async Task ReleaseWatcher()
     {

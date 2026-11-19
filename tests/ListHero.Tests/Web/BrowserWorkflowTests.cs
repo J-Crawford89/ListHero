@@ -20,7 +20,8 @@ public sealed partial class WebHostTests
         await using var api = OwnerWorkflowTests.CreateBrowserApiFactory();
         using (var scope = api.Services.CreateScope())
             await scope.ServiceProvider.GetRequiredService<ListHeroDbContext>().Database.MigrateAsync();
-        await using var web = new WebFactory(apiHandler: () => api.Server.CreateHandler());
+        var draftDrop = new DraftResponseDrop();
+        await using var web = new WebFactory(apiHandler: () => new DraftDropHandler(api.Server.CreateHandler(), draftDrop));
         using var rsa = RSA.Create(2048);
         var request = new CertificateRequest("CN=localhost", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         var names = new SubjectAlternativeNameBuilder(); names.AddDnsName("localhost"); names.AddIpAddress(IPAddress.Loopback);
@@ -178,6 +179,7 @@ public sealed partial class WebHostTests
         await VerifyDraftNavigationAsync(browser, origin);
         await VerifyCrossTabSessionsAsync(browser, origin, api.Services);
         await VerifyMyListsPaginationAsync(browser, origin, api.Services);
+        await VerifyAutomaticDraftRecoveryAsync(browser, origin, api.Services, draftDrop);
         Assert.Empty(errors);
     }
     private static async Task CaptureResponsiveReviewAsync(IPage page, string name)

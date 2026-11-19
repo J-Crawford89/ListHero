@@ -10,7 +10,7 @@ A layout-level location-changing handler asks before internal navigation, includ
 
 Known successful list creation/archive operations acknowledge their forms before programmatic navigation. Shared JavaScript state coordinates sign-in/session recovery with the unload guard to avoid a second prompt for an already approved reload. Declining sign-in creates no pending-return cookie. Accepting still uses the existing encrypted, antiforgery-protected private-share return flow.
 
-Draft baselines live only in page memory; they are not written to browser storage, the database, URLs, or logs. These are navigation warnings, not autosave or draft restoration. Accepting reload/navigation discards the draft. Browser/OS termination can bypass unload prompts. The UI reports initialization failure so manual saving remains possible.
+Draft guard baselines live only in page memory. The subsequent [automatic draft recovery](automatic-draft-recovery.md) batch adds separate encrypted, account/form-bound recovery copies in tab storage for up to 24 hours. Accepting reload/navigation still replaces the live form, but an available copy can be explicitly restored afterward. Restored copies remain unsaved and never submit automatically. Browser/OS termination can bypass unload prompts or occur before the latest copy is saved. The UI reports initialization/storage failures so manual copying remains possible.
 
 ## Session synchronization
 
@@ -22,11 +22,11 @@ Declining reload leaves the original session baseline intact, preserves the draf
 
 ## Verification
 
-All 316 tests passed without skips, including SQL Server and headless Chromium. All nine assembly coverage gates passed. Evidence: `.artifacts/qol-session-drafts-final/coverage.trx` and its coverage attachment.
+The original guard batch passed all 316 tests without skips, including SQL Server and headless Chromium. All nine assembly coverage gates passed. Evidence: `.artifacts/qol-session-drafts-final/coverage.trx` and its coverage attachment. The later automatic recovery batch passes 483 tests; see its linked guide for current evidence and added journeys.
 
 - Real browser tests cover canceled internal links, Back, reload, tab close, and sign-out; accepting navigation; restoring the original field value; unguarded search filters; successful list/item/profile/share-link saves; and profile discard.
 - Dirty private-share sign-in is canceled without losing the quantity or creating return state. Acceptance produces one confirmation and preserves the encrypted return flow.
 - Two tabs share actual app cookies. Tests replace the signed-in account, decline reload twice, retain the draft, and verify that submitting it cannot create a SQL list from the stale circuit. Recovery reloads into the new session. Additional checks cover sign-out in another tab, anonymous-to-signed-in synchronization, and an unchanged session avoiding a reload loop.
 - Component/service tests cover navigation cancellation, editor switching, initialization fallback, scoped session invalidation, disposal, and refusing MSAL acquisition after a detected session change.
 
-The browser fixtures use real app cookie/antiforgery middleware and SQL with test-only identity setup; they do not contact Entra or prove provider-specific policies or weeks-long browser retention. Operational diagnostics, retention/restore policy, and optional protected draft restoration remain separate work.
+The browser fixtures use real app cookie/antiforgery middleware and SQL with test-only identity setup; they do not contact Entra or prove provider-specific policies or weeks-long browser retention. Operational diagnostics, retention/restore policy, and automatic protected draft recovery have since been implemented in their respective follow-up batches. Hosted acceptance remains separate.
